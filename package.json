@@ -1,0 +1,47 @@
+{
+  "name": "auto",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./out/autoparser.js",
+  "engines": {
+    "vscode": "^1.1.37"
+  },
+  "author": "Karan Mehta",
+  "license": "ISC",
+  "scripts": {
+    "vscode:prepublish": "npm run compile && npm run esbuild-base -- --minify",
+    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
+    "esbuild": "npm run esbuild-base -- --sourcemap",
+    "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
+    "test-compile": "tsc -p ./",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "start-suggestion-server": "python3 -m flask run -h localhost -p 8585",
+    "postinstall": "node ./node_modules/vscode/bin/install"
+  },
+  "devDependencies": {
+    "@types/esprima": "^4.0.1",
+    "@types/glob": "^7.2.0",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "^17.0.32",
+    "@types/node-fetch": "^2.6.2",
+    "@types/vscode": "^1.66.0",
+    "@typescript-eslint/eslint-plugin": "^5.22.0",
+    "@typescript-eslint/parser": "^5.22.0",
+    "@vscode/test-electron": "^2.1.3",
+    "esbuild": "^0.14.39",
+    "eslint": "^8.14.0",
+    "glob": "^8.0.1"
+  },
+  "dependencies": {
+    "@angular/cli": "^13.3.5",
+    "esprima": "^4.0.1",
+    "express": "^4.18.1",
+    "fs-readdir-recursive": "^1.1.0",
+    "node-fetch": "^2.6.7",
+    "vscode": "^1.1.37"
+  }
+}
