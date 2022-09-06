@@ -1,4 +1,27 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -6,6 +29,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs_readdir_recursive_1 = __importDefault(require("fs-readdir-recursive"));
 const typescript_1 = __importDefault(require("typescript"));
 const fs_1 = require("fs");
+const es = __importStar(require("esprima"));
 const node_fetch_1 = __importDefault(require("node-fetch"));
 const PORT_NUM = 9090;
 var project = null;
@@ -15,7 +39,6 @@ var staticAnalysisTypes = 0;
 var modelBasedAnalysisTypes = 0;
 var common = 0;
 var couldNotInfer = 0;
-var importSet = new Set();
 let basicTypes = new Map();
 basicTypes.set(typescript_1.default.SyntaxKind.BooleanKeyword, "boolean");
 basicTypes.set(typescript_1.default.SyntaxKind.BooleanKeyword, "boolean");
@@ -171,36 +194,21 @@ function fast_linter(checker, sourceFile, loc, word) {
     }
     if (loc != null) {
         typescript_1.default.visitNode(sourceFile, visit);
-        //console.log(tokens);
         return [tokens, inferred_type, word_index];
     }
 }
-var tokens_at_start = [];
-function create_word_indexes(sourceFile) {
-    var tokens = [];
-    function visit(node) {
-        if (node.kind === typescript_1.default.SyntaxKind.Identifier) {
-            tokens_at_start.push([node.getText, tokens.length - 1]);
-        }
-        for (var child of node.getChildren(sourceFile)) {
-            if (child.getChildren().length === 0 && child.getText().length > 0) {
-                tokens.push(child.getText());
-            }
-            visit(child);
-        }
-        return node;
-    }
-    typescript_1.default.visitNode(sourceFile, visit);
-    //console.log(tokens);
-    return;
-}
+var initial_tokens = [];
 function setInitialTokens(file_name) {
-    project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
-    program = project.getProgram();
-    var sourcefile = program.getSourceFile(file_name);
-    create_word_indexes(sourcefile);
-    console.log(tokens_at_start);
+    var contents = readfile(file_name);
+    let parsed = es.parseScript(contents, { range: true, tokens: true });
     //console.log(parsed);
+    for (let i = 0; i < parsed.tokens.length; i++) {
+        if (checkElement(parsed.tokens[i], i, parsed.tokens)) {
+            initial_tokens.push(parsed.tokens[i]);
+            //console.log("initial tokens: ", parsed.tokens[i].value)
+        }
+    }
+    console.log("Total tokens: ", initial_tokens.length);
 }
 var document_position = null;
 var filename = "src/test/test-this.js";
@@ -208,32 +216,32 @@ var contents = readfile(filename);
 async function ast(file_name) {
     try {
         //console.log(initial_tokens);
-        for (let idx = 0; idx < tokens_at_start.length; idx++) {
+        for (let idx = 0; idx < initial_tokens.length; idx++) {
             project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
             program = project.getProgram();
             var sourcefile = program.getSourceFile(file_name);
             //console.log(sourcefile);
             //console.log("file :" + file_name + " " + "sourcefile :" + sourcefile);
             let checker = program.getTypeChecker();
-            var word_of_interest = tokens_at_start[0];
-            document_position = tokens_at_start[1];
+            var word_of_interest = initial_tokens[idx].value;
+            document_position = initial_tokens[idx].range[0];
             let tokens_and_inferred = fast_linter(checker, sourcefile, document_position, word_of_interest);
             var tokens = tokens_and_inferred[0];
             var inferred_type = tokens_and_inferred[1];
-            //console.log("INFERRED TYPE: " + inferred_type);
+            console.log("INFERRED TYPE: " + inferred_type);
             var word_index = tokens_and_inferred[2];
-            //console.log("For word: " + initial_tokens[idx].value + " WORD INDEX: " + word_index + " document position: " + document_position + " map position: " + it.get(initial_tokens[idx].value));
+            console.log(" WORD INDEX: " + word_index);
             if (inferred_type && word_index) {
                 let data = await getTypeSuggestions(JSON.stringify(tokens), word_index);
                 //console.log(data);
                 complete_list_of_types = getTypes(inferred_type, data);
-                contents = insert(sourcefile, complete_list_of_types[0], word_index, word_of_interest);
+                contents = insert(sourcefile, complete_list_of_types[0], document_position, word_of_interest);
                 //console.log(contents);
                 file_name = changeExtension(file_name);
                 writeToFile(file_name, contents);
             }
             else {
-                //console.log("Could not infer type for: ", initial_tokens[idx]);
+                console.log("Could not infer type for: ", initial_tokens[idx]);
                 couldNotInfer++;
             }
         }
@@ -284,14 +292,14 @@ function writeToFile(destinationFilePath, textToWrite) {
     (0, fs_1.writeFileSync)(destinationFilePath, textToWrite);
 }
 function checkElement(element, idx, parsed) {
-    if (element.type !== "Identifier" || importSet.has(element.value)) {
+    if (element.type !== "Identifier") {
         return false;
     }
     //console.log(parsed[idx].value, " " , parsed[idx + 2].value);
-    if (idx + 2 < parsed.length && parsed[idx + 2].value === "require") {
-        importSet.add(parsed[idx].value);
-        return false;
-    }
+    // if (idx + 2 < parsed.length && parsed[idx + 2].value === "require") {
+    //     importSet.add(parsed[idx].value);
+    //     return false;
+    // }
     // Handling console.log -- TO DO Handle for different types of statements?
     // if (element.value === "console" || tokens[idx + 1] === "." || tokens[idx + 2] === "log") {
     //     return false;
@@ -366,10 +374,11 @@ function insert(sourceFile, type, loc, word) {
 }
 // calling the methods
 setInitialTokens(filename);
-ast(filename).then(function (response) {
-    console.log("Could not infer: ", couldNotInfer);
-    console.log("Inferred from static Analysis: ", staticAnalysisTypes);
-    console.log("Inferred from model based analysis: ", modelBasedAnalysisTypes);
-    console.log("Common between model and static based anaylsis: ", common);
-});
+ast(filename);
+// .then(function (response) {
+//     console.log("Could not infer: ", couldNotInfer);
+//     console.log("Inferred from static Analysis: ", staticAnalysisTypes);
+//     console.log("Inferred from model based analysis: ", modelBasedAnalysisTypes);
+//     console.log("Common between model and static based anaylsis: ", common);
+// });
 //save the entire file here

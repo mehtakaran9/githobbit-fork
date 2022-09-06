@@ -1,9 +1,8 @@
 import read from 'fs-readdir-recursive';
 import ts from 'typescript';
-import { readFileSync, stat, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import * as es from 'esprima';
 import fetch from 'node-fetch';
-import * as path from 'path';
 const PORT_NUM = 9090;
 var project = null;
 var program = null;
@@ -12,7 +11,6 @@ var staticAnalysisTypes = 0;
 var modelBasedAnalysisTypes = 0;
 var common = 0;
 var couldNotInfer = 0;
-var importSet = new Set();
 let basicTypes = new Map<ts.SyntaxKind, string>();
 basicTypes.set(ts.SyntaxKind.BooleanKeyword, "boolean");
 basicTypes.set(ts.SyntaxKind.BooleanKeyword, "boolean");
@@ -170,39 +168,22 @@ function fast_linter(checker: ts.TypeChecker, sourceFile: ts.SourceFile, loc, wo
     }
     if (loc != null) {
         ts.visitNode(sourceFile, visit);
-        //console.log(tokens);
         return [tokens, inferred_type, word_index];
     }
 }
 
-
-var tokens_at_start = [];
-function create_word_indexes(sourceFile: ts.SourceFile) {
-    var tokens: any = [];
-    function visit(node: ts.Node): ts.Node {
-        if (node.kind === ts.SyntaxKind.Identifier) {
-            tokens_at_start.push([node.getText, tokens.length - 1]);
-        }
-        for (var child of node.getChildren(sourceFile)) {
-            if (child.getChildren().length === 0 && child.getText().length > 0) {
-                tokens.push(child.getText());
-            }
-            visit(child);
-        }
-        return node;
-    }
-    ts.visitNode(sourceFile, visit);
-    //console.log(tokens);
-    return;
-}
-
+var initial_tokens = [];
 function setInitialTokens(file_name: string) {
-    project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
-    program = project.getProgram();
-    var sourcefile = program.getSourceFile(file_name);
-    create_word_indexes(sourcefile);
-    console.log(tokens_at_start);
+    var contents = readfile(file_name);
+    let parsed = es.parseScript(contents, { range: true, tokens: true});
     //console.log(parsed);
+    for (let i = 0; i < parsed.tokens.length; i++) {
+        if (checkElement(parsed.tokens[i], i, parsed.tokens)) {
+            initial_tokens.push(parsed.tokens[i]);
+            //console.log("initial tokens: ", parsed.tokens[i].value)
+        }
+    }
+    console.log("Total tokens: ", initial_tokens.length);
 }
 
 var document_position = null;
@@ -212,37 +193,35 @@ var contents = readfile(filename);
 async function ast(file_name: string) {
     try {
         //console.log(initial_tokens);
-        for (let idx = 0; idx < tokens_at_start.length; idx++) {
+        for (let idx = 0; idx < initial_tokens.length; idx++) {
             project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
             program = project.getProgram();
             var sourcefile = program.getSourceFile(file_name);
             //console.log(sourcefile);
             //console.log("file :" + file_name + " " + "sourcefile :" + sourcefile);
             let checker = program.getTypeChecker();
-            var word_of_interest = tokens_at_start[0];
-            document_position = tokens_at_start[1]; 
+            var word_of_interest = initial_tokens[idx].value;
+            document_position = initial_tokens[idx].range[0]; 
             
             let tokens_and_inferred = fast_linter(checker, sourcefile, document_position, word_of_interest);
             var tokens = tokens_and_inferred[0];
             var inferred_type = tokens_and_inferred[1];
-            //console.log("INFERRED TYPE: " + inferred_type);
+            console.log("INFERRED TYPE: " + inferred_type);
             var word_index = tokens_and_inferred[2];
-            //console.log("For word: " + initial_tokens[idx].value + " WORD INDEX: " + word_index + " document position: " + document_position + " map position: " + it.get(initial_tokens[idx].value));
+            console.log(" WORD INDEX: " + word_index);
 
             if (inferred_type && word_index) {
                 let data = await getTypeSuggestions(JSON.stringify(tokens), word_index);
                 //console.log(data);
                 complete_list_of_types = getTypes(inferred_type, data);
-                contents = insert(sourcefile, complete_list_of_types[0], word_index, word_of_interest);
+                contents = insert(sourcefile, complete_list_of_types[0], document_position, word_of_interest);
                 //console.log(contents);
                 file_name = changeExtension(file_name);
                 writeToFile(file_name, contents);
-            }
-            else {
-                //console.log("Could not infer type for: ", initial_tokens[idx]);
+            } else {
+                console.log("Could not infer type for: ", initial_tokens[idx]);
                 couldNotInfer++;
             }
-            
         }
     } catch (e) {
         console.log("Could not process the file");
@@ -292,14 +271,14 @@ function writeToFile(destinationFilePath: string, textToWrite: string) {
 }
 
 function checkElement(element: any, idx: number, parsed: any) : boolean {
-    if (element.type !== "Identifier" || importSet.has(element.value)) {
+    if (element.type !== "Identifier") {
         return false;
     }
     //console.log(parsed[idx].value, " " , parsed[idx + 2].value);
-    if (idx + 2 < parsed.length && parsed[idx + 2].value === "require") {
-        importSet.add(parsed[idx].value);
-        return false;
-    }
+    // if (idx + 2 < parsed.length && parsed[idx + 2].value === "require") {
+    //     importSet.add(parsed[idx].value);
+    //     return false;
+    // }
     // Handling console.log -- TO DO Handle for different types of statements?
     // if (element.value === "console" || tokens[idx + 1] === "." || tokens[idx + 2] === "log") {
     //     return false;
@@ -380,12 +359,13 @@ function insert(sourceFile: ts.SourceFile, type: string, loc: number, word: stri
 // calling the methods
 
 setInitialTokens(filename);
-ast(filename).then(function (response) {
-    console.log("Could not infer: ", couldNotInfer);
-    console.log("Inferred from static Analysis: ", staticAnalysisTypes);
-    console.log("Inferred from model based analysis: ", modelBasedAnalysisTypes);
-    console.log("Common between model and static based anaylsis: ", common);
-});
+ast(filename);
+// .then(function (response) {
+//     console.log("Could not infer: ", couldNotInfer);
+//     console.log("Inferred from static Analysis: ", staticAnalysisTypes);
+//     console.log("Inferred from model based analysis: ", modelBasedAnalysisTypes);
+//     console.log("Common between model and static based anaylsis: ", common);
+// });
 
 //save the entire file here
 
