@@ -35,10 +35,14 @@ const PORT_NUM = 9090;
 var project = null;
 var program = null;
 var complete_list_of_types = [];
+var totalStaticInferences = 0;
+var totalDeepLearnerInferences = 0;
 var staticAnalysisTypes = 0;
 var modelBasedAnalysisTypes = 0;
 var common = 0;
 var couldNotInfer = 0;
+let importSet = new Set();
+importSet.add("require");
 let basicTypes = new Map();
 basicTypes.set(typescript_1.default.SyntaxKind.BooleanKeyword, "boolean");
 basicTypes.set(typescript_1.default.SyntaxKind.BooleanKeyword, "boolean");
@@ -203,11 +207,11 @@ function setInitialTokens(file_name) {
     let parsed = es.parseScript(contents, { range: true, tokens: true });
     //console.log(parsed);
     for (let i = 0; i < parsed.tokens.length; i++) {
-        if (checkElement(parsed.tokens[i], i, parsed.tokens)) {
+        if (checkElement(parsed.tokens[i], i, parsed.tokens) === true) {
             initial_tokens.push(parsed.tokens[i]);
-            //console.log("initial tokens: ", parsed.tokens[i].value)
         }
     }
+    console.log(initial_tokens);
     console.log("Total tokens: ", initial_tokens.length);
 }
 var document_position = null;
@@ -252,7 +256,11 @@ async function ast(file_name) {
 }
 function getTypes(inferred_type, data) {
     complete_list_of_types = [];
+    if (data != undefined) {
+        totalDeepLearnerInferences++;
+    }
     if (inferred_type !== undefined) {
+        totalStaticInferences++;
         if (data.type_suggestions[0] === inferred_type) {
             //console.log("Common type: ", inferred_type);
             common++;
@@ -292,18 +300,25 @@ function writeToFile(destinationFilePath, textToWrite) {
     (0, fs_1.writeFileSync)(destinationFilePath, textToWrite);
 }
 function checkElement(element, idx, parsed) {
-    if (element.type !== "Identifier") {
+    if (element.type !== "Identifier" || importSet.has(element.value)) {
         return false;
     }
-    //console.log(parsed[idx].value, " " , parsed[idx + 2].value);
-    // if (idx + 2 < parsed.length && parsed[idx + 2].value === "require") {
-    //     importSet.add(parsed[idx].value);
+    // check for import statements. e.g const fs = require('fs');
+    if (idx + 2 < parsed.length && parsed[idx + 1].value === "=" && parsed[idx + 2].value === "require") {
+        console.log("element rejected", element.value);
+        importSet.add(element.value);
+        return false;
+    }
+    //// checking for functions being used from an import. eg fs.readFileSync
+    // if (idx - 2 >= 0 && parsed[idx - 1].value === "." && importSet.has(parsed[idx - 2].value)) {
+    //     console.log("element rejected", element.value);
+    //     importSet.add(element.value);
     //     return false;
     // }
     // Handling console.log -- TO DO Handle for different types of statements?
-    // if (element.value === "console" || tokens[idx + 1] === "." || tokens[idx + 2] === "log") {
-    //     return false;
-    // }
+    if (element.value === "console" || parsed[idx + 1].value === "." || parsed[idx + 2].value === "log") {
+        return false;
+    }
     return true;
 }
 function incrementalCompile(dir) {
@@ -374,11 +389,12 @@ function insert(sourceFile, type, loc, word) {
 }
 // calling the methods
 setInitialTokens(filename);
-ast(filename);
-// .then(function (response) {
-//     console.log("Could not infer: ", couldNotInfer);
-//     console.log("Inferred from static Analysis: ", staticAnalysisTypes);
-//     console.log("Inferred from model based analysis: ", modelBasedAnalysisTypes);
-//     console.log("Common between model and static based anaylsis: ", common);
-// });
+ast(filename).then(function (response) {
+    console.log("Could not infer: ", couldNotInfer);
+    console.log("Total Static Suggestions: ", totalStaticInferences);
+    console.log("Total Deep Learner inferences: ", totalDeepLearnerInferences);
+    console.log("Selected from static Analysis: ", staticAnalysisTypes);
+    console.log("Selected from model based analysis: ", modelBasedAnalysisTypes);
+    console.log("Common selections from static and deep learner: ", common);
+});
 //save the entire file here
