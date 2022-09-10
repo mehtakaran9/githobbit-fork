@@ -3,10 +3,11 @@ import ts from 'typescript';
 import { readFileSync, writeFileSync } from 'fs';
 import * as es from 'esprima';
 import fetch from 'node-fetch';
+import { dir } from 'console';
 
 const PORT_NUM = 9090;
-var project = null;
-var program = null;
+var LINTER_THRESHOLD_MARGIN = 20;
+var INSERT_THRESHOLD_MARGIN = 20;
 var complete_list_of_types = [];
 var totalStaticInferences = 0;
 var totalDeepLearnerInferences = 0;
@@ -44,10 +45,10 @@ ignoredTypes.add(ts.SyntaxKind.IntersectionType);
 ignoredTypes.add(ts.SyntaxKind.TypeQuery);
 const filteredFiles = read(__dirname).filter(item => item.endsWith(".js"));
 
-var proj = null;
 function readfile(fileName: string): any {
     return readFileSync(fileName, 'utf-8');
 }
+
 function parseEntityName(n: ts.EntityName): string {
     if (n.kind === ts.SyntaxKind.Identifier) {
         return n.text;
@@ -56,6 +57,7 @@ function parseEntityName(n: ts.EntityName): string {
         return parseEntityName(n.left) + "." + n.right.text;
     }
 }
+
 function parseType(node: any) {
     var type: any = undefined;
     if (node.kind === ts.SyntaxKind.AnyKeyword) {
@@ -148,7 +150,7 @@ function fast_linter(checker: ts.TypeChecker, sourceFile: ts.SourceFile, loc, wo
     var typeCache = undefined;
     function visit(node: ts.Node): ts.Node {
         if (node.kind === ts.SyntaxKind.Identifier) {
-            if (node.getText() === word && (node.pos < loc + 20 && node.pos > loc - 20)) {
+            if (node.getText() === word && (node.pos < loc + LINTER_THRESHOLD_MARGIN && node.pos > loc - LINTER_THRESHOLD_MARGIN)) {
                 word_index = tokens.length - 1;
                 inferred_type = typeCache;
             }
@@ -177,14 +179,12 @@ function fast_linter(checker: ts.TypeChecker, sourceFile: ts.SourceFile, loc, wo
     }
 }
 
-var to_ignore = new Set();
-var initial_tokens = [];
-var document_position = null;
 var filename = "src/test/test-this.js";
 var contents = readfile(filename);
+var dirPath = "/Users/karanmehta/UCD/GSR GitHobbit/auto/test";
 
-function setInitialTokens(file_name: string) {
-
+function ignoredElements(file_name) : Set<String> {
+    var to_ignore = new Set<String>();
     var contents = readfile(file_name);
     let parsed = es.parseScript(contents, { range: true, tokens: true});
     let tokens = parsed.tokens;
@@ -193,14 +193,22 @@ function setInitialTokens(file_name: string) {
             to_ignore.add(tokens[i].value);
         }
     }
+    return to_ignore;
+}
 
-    project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
-    program = project.getProgram();
+function getProgram(dir_path: string) : ts.Program {
+    let project = incrementalCompile(dir_path);
+    let program = project.getProgram();
+    return program;
+}
+
+function identifyTokens(file_name : string, to_ignore: Set<String>, program: ts.Program) {
+    let tokens = [];
     var sourcefile : ts.SourceFile = program.getSourceFile(file_name);
     
     function nodeChecker(node: ts.Node) {
         if (node.kind === ts.SyntaxKind.Identifier && !to_ignore.has(node.getText())) {
-            initial_tokens.push([node.getText(), node.pos]);
+            tokens.push([node.getText(), node.pos]);
         }
         for (var child of node.getChildren(sourcefile)) {
             nodeChecker(child);
@@ -209,32 +217,35 @@ function setInitialTokens(file_name: string) {
     }
 
     ts.visitNode(sourcefile, nodeChecker);
-    console.log("Total tokens: ", initial_tokens.length);
+    return tokens;
 }
 
-async function ast(file_name: string) {
+async function automatedInserter(file_name: string, dir_path : string) {
+    var to_ignore = ignoredElements(file_name);
+    let starting_tokens = identifyTokens(file_name, to_ignore, getProgram(dir_path));
+    let length = starting_tokens.length;
+    let idx = 0;
     try {
-        for (let idx = 0; idx < initial_tokens.length; idx++) {
-
+        while (idx != length) {
             //getting the sourcefile
-            project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
-            program = project.getProgram();
+            var program = getProgram(dirPath);
+            let initial_tokens = identifyTokens(file_name, to_ignore, program);
             var sourcefile : ts.SourceFile = program.getSourceFile(file_name);
 
             //program checker
             let checker = program.getTypeChecker();
             //fetching idx as doc position and the word to check annotations for
             var word_of_interest = initial_tokens[idx][0];
-            document_position = initial_tokens[idx][1];
+            var document_position = initial_tokens[idx][1];
 
             //return tokens and static analysis result 
             let tokens_and_inferred = fast_linter(checker, sourcefile, document_position, word_of_interest);
             
             var tokens = tokens_and_inferred[0];
             var inferred_type = tokens_and_inferred[1];
-            //console.log("INFERRED TYPE: " + inferred_type);
+            console.log("INFERRED TYPE: " + inferred_type);
             var word_index = tokens_and_inferred[2];
-            //console.log(" WORD INDEX: " + word_index);
+            console.log(" WORD INDEX: " + word_index);
             
             if (inferred_type && word_index) {
                 let data = await getTypeSuggestions(JSON.stringify(tokens), word_index);
@@ -246,6 +257,7 @@ async function ast(file_name: string) {
                 console.log("Could not infer type for: ", initial_tokens[idx]);
                 couldNotInfer++;
             }
+            idx++;
         }
     } catch (e) {
         console.log("Could not process the file");
@@ -305,17 +317,6 @@ function checkElement(element: any, idx: number, parsed: any) : boolean {
         importSet.add(element.value);
         return false;
     }
-
-    //// checking for functions being used from an import. eg fs.readFileSync
-    // if (idx - 2 >= 0 && parsed[idx - 1].value === "." && importSet.has(parsed[idx - 2].value)) {
-    //     console.log("element rejected", element.value);
-    //     importSet.add(element.value);
-    //     return false;
-    // }
-
-    if (element.value === "console" && parsed[idx + 1].value === "." && parsed[idx + 2].value === "log") {
-        return false;
-    }
     return true;
 }
 
@@ -364,7 +365,7 @@ function insert(sourceFile: ts.SourceFile, type: string, loc: number, word: stri
                 visit(child);
             }
             if (node.kind === ts.SyntaxKind.Identifier) {
-                if (node.getText() === word && (node.pos < loc + 20 && node.pos > loc - 20)) {
+                if (node.getText() === word && (node.pos < loc + INSERT_THRESHOLD_MARGIN && node.pos > loc - INSERT_THRESHOLD_MARGIN)) {
                     match_identifier = true;
                 }
             }
@@ -389,8 +390,7 @@ function insert(sourceFile: ts.SourceFile, type: string, loc: number, word: stri
 }
 
 // calling the methods
-setInitialTokens(filename);
-ast(filename).then(() => {
+automatedInserter(filename, dirPath).then(() => {
     console.log("Could not infer: ", couldNotInfer);
     console.log("Total Static Analysis Inferences: ", totalStaticInferences);
     console.log("Total Deep Learner Inferences: ", totalDeepLearnerInferences);

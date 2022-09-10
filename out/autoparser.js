@@ -1,4 +1,27 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -6,10 +29,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs_readdir_recursive_1 = __importDefault(require("fs-readdir-recursive"));
 const typescript_1 = __importDefault(require("typescript"));
 const fs_1 = require("fs");
+const es = __importStar(require("esprima"));
 const node_fetch_1 = __importDefault(require("node-fetch"));
 const PORT_NUM = 9090;
-var project = null;
-var program = null;
+var LINTER_THRESHOLD_MARGIN = 20;
+var INSERT_THRESHOLD_MARGIN = 20;
 var complete_list_of_types = [];
 var totalStaticInferences = 0;
 var totalDeepLearnerInferences = 0;
@@ -46,7 +70,6 @@ ignoredTypes.add(typescript_1.default.SyntaxKind.TypeOperator);
 ignoredTypes.add(typescript_1.default.SyntaxKind.IntersectionType);
 ignoredTypes.add(typescript_1.default.SyntaxKind.TypeQuery);
 const filteredFiles = (0, fs_readdir_recursive_1.default)(__dirname).filter(item => item.endsWith(".js"));
-var proj = null;
 function readfile(fileName) {
     return (0, fs_1.readFileSync)(fileName, 'utf-8');
 }
@@ -149,7 +172,7 @@ function fast_linter(checker, sourceFile, loc, word) {
     var typeCache = undefined;
     function visit(node) {
         if (node.kind === typescript_1.default.SyntaxKind.Identifier) {
-            if (node.getText() === word && (node.pos < loc + 20 && node.pos > loc - 20)) {
+            if (node.getText() === word && (node.pos < loc + LINTER_THRESHOLD_MARGIN && node.pos > loc - LINTER_THRESHOLD_MARGIN)) {
                 word_index = tokens.length - 1;
                 inferred_type = typeCache;
             }
@@ -177,23 +200,32 @@ function fast_linter(checker, sourceFile, loc, word) {
         return [tokens, inferred_type, word_index];
     }
 }
-//var to_ignore = new Set();
-function setInitialTokens(file_name) {
-    // var contents = readfile(file_name);
-    // let parsed = es.parseScript(contents, { range: true, tokens: true});
-    // let tokens = parsed.tokens;
-    // for (let i = 0; i < tokens.length; i++) {
-    //     if (!checkElement(tokens[i], i, tokens)) {
-    //         to_ignore.add(tokens[i].value);
-    //     }
-    // }
-    var initial_tokens = [];
-    project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
-    program = project.getProgram();
+var filename = "src/test/test-this.js";
+var contents = readfile(filename);
+var dirPath = "/Users/karanmehta/UCD/GSR GitHobbit/auto/test";
+function ignoredElements(file_name) {
+    var to_ignore = new Set();
+    var contents = readfile(file_name);
+    let parsed = es.parseScript(contents, { range: true, tokens: true });
+    let tokens = parsed.tokens;
+    for (let i = 0; i < tokens.length; i++) {
+        if (!checkElement(tokens[i], i, tokens)) {
+            to_ignore.add(tokens[i].value);
+        }
+    }
+    return to_ignore;
+}
+function getProgram(dir_path) {
+    let project = incrementalCompile(dir_path);
+    let program = project.getProgram();
+    return program;
+}
+function identifyTokens(file_name, to_ignore, program) {
+    let tokens = [];
     var sourcefile = program.getSourceFile(file_name);
     function nodeChecker(node) {
-        if (node.kind === typescript_1.default.SyntaxKind.Identifier) {
-            initial_tokens.push([node.getText(), node.pos]);
+        if (node.kind === typescript_1.default.SyntaxKind.Identifier && !to_ignore.has(node.getText())) {
+            tokens.push([node.getText(), node.pos]);
         }
         for (var child of node.getChildren(sourcefile)) {
             nodeChecker(child);
@@ -201,32 +233,31 @@ function setInitialTokens(file_name) {
         return node;
     }
     typescript_1.default.visitNode(sourcefile, nodeChecker);
-    console.log("Tokens right now: ", initial_tokens);
-    console.log("Total tokens: ", initial_tokens.length);
-    return initial_tokens;
+    return tokens;
 }
-var document_position = null;
-var filename = "src/test/test-this.js";
-var contents = readfile(filename);
-async function ast(file_name) {
-    var initial_tokens = setInitialTokens(file_name);
+async function automatedInserter(file_name, dir_path) {
+    var to_ignore = ignoredElements(file_name);
+    let starting_tokens = identifyTokens(file_name, to_ignore, getProgram(dir_path));
+    let length = starting_tokens.length;
+    let idx = 0;
     try {
-        for (let idx = 0; idx < initial_tokens.length; idx++) {
-            project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
-            program = project.getProgram();
+        while (idx != length) {
+            //getting the sourcefile
+            var program = getProgram(dirPath);
+            let initial_tokens = identifyTokens(file_name, to_ignore, program);
             var sourcefile = program.getSourceFile(file_name);
-            console.log("Word: ", initial_tokens[idx][0]);
-            setInitialTokens(file_name);
-            //console.log(sourcefile);
+            //program checker
             let checker = program.getTypeChecker();
+            //fetching idx as doc position and the word to check annotations for
             var word_of_interest = initial_tokens[idx][0];
-            document_position = initial_tokens[idx][1];
+            var document_position = initial_tokens[idx][1];
+            //return tokens and static analysis result 
             let tokens_and_inferred = fast_linter(checker, sourcefile, document_position, word_of_interest);
             var tokens = tokens_and_inferred[0];
             var inferred_type = tokens_and_inferred[1];
-            //console.log("INFERRED TYPE: " + inferred_type);
+            console.log("INFERRED TYPE: " + inferred_type);
             var word_index = tokens_and_inferred[2];
-            //console.log(" WORD INDEX: " + word_index);
+            console.log(" WORD INDEX: " + word_index);
             if (inferred_type && word_index) {
                 let data = await getTypeSuggestions(JSON.stringify(tokens), word_index);
                 complete_list_of_types = getTypes(inferred_type, data);
@@ -238,6 +269,7 @@ async function ast(file_name) {
                 console.log("Could not infer type for: ", initial_tokens[idx]);
                 couldNotInfer++;
             }
+            idx++;
         }
     }
     catch (e) {
@@ -295,15 +327,6 @@ function checkElement(element, idx, parsed) {
         importSet.add(element.value);
         return false;
     }
-    //// checking for functions being used from an import. eg fs.readFileSync
-    // if (idx - 2 >= 0 && parsed[idx - 1].value === "." && importSet.has(parsed[idx - 2].value)) {
-    //     console.log("element rejected", element.value);
-    //     importSet.add(element.value);
-    //     return false;
-    // }
-    if (element.value === "console" && parsed[idx + 1].value === "." && parsed[idx + 2].value === "log") {
-        return false;
-    }
     return true;
 }
 function incrementalCompile(dir) {
@@ -348,7 +371,7 @@ function insert(sourceFile, type, loc, word) {
                 visit(child);
             }
             if (node.kind === typescript_1.default.SyntaxKind.Identifier) {
-                if (node.getText() === word && (node.pos < loc + 20 && node.pos > loc - 20)) {
+                if (node.getText() === word && (node.pos < loc + INSERT_THRESHOLD_MARGIN && node.pos > loc - INSERT_THRESHOLD_MARGIN)) {
                     match_identifier = true;
                 }
             }
@@ -372,8 +395,7 @@ function insert(sourceFile, type, loc, word) {
     return printer.printFile(transformedSourceFile);
 }
 // calling the methods
-setInitialTokens(filename);
-ast(filename).then(() => {
+automatedInserter(filename, dirPath).then(() => {
     console.log("Could not infer: ", couldNotInfer);
     console.log("Total Static Analysis Inferences: ", totalStaticInferences);
     console.log("Total Deep Learner Inferences: ", totalDeepLearnerInferences);
