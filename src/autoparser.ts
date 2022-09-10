@@ -178,6 +178,11 @@ function fast_linter(checker: ts.TypeChecker, sourceFile: ts.SourceFile, loc, wo
 }
 
 var to_ignore = new Set();
+var initial_tokens = [];
+var document_position = null;
+var filename = "src/test/test-this.js";
+var contents = readfile(filename);
+
 function setInitialTokens(file_name: string) {
 
     var contents = readfile(file_name);
@@ -188,7 +193,7 @@ function setInitialTokens(file_name: string) {
             to_ignore.add(tokens[i].value);
         }
     }
-    var initial_tokens = [];
+
     project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
     program = project.getProgram();
     var sourcefile : ts.SourceFile = program.getSourceFile(file_name);
@@ -202,33 +207,35 @@ function setInitialTokens(file_name: string) {
         }
         return node;
     }
+
     ts.visitNode(sourcefile, nodeChecker);
-    console.log("Tokens right now: ", initial_tokens);
     console.log("Total tokens: ", initial_tokens.length);
-    return initial_tokens;
 }
 
-var document_position = null;
-var filename = "src/test/test-this.js";
-var contents = readfile(filename);
-
 async function ast(file_name: string) {
-    var initial_tokens = setInitialTokens(file_name);
     try {
         for (let idx = 0; idx < initial_tokens.length; idx++) {
+
+            //getting the sourcefile
             project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
             program = project.getProgram();
             var sourcefile : ts.SourceFile = program.getSourceFile(file_name);
-            //console.log(sourcefile);
+
+            //program checker
             let checker = program.getTypeChecker();
+            //fetching idx as doc position and the word to check annotations for
             var word_of_interest = initial_tokens[idx][0];
-            document_position = initial_tokens[idx][1]; 
+            document_position = initial_tokens[idx][1];
+
+            //return tokens and static analysis result 
             let tokens_and_inferred = fast_linter(checker, sourcefile, document_position, word_of_interest);
+            
             var tokens = tokens_and_inferred[0];
             var inferred_type = tokens_and_inferred[1];
             //console.log("INFERRED TYPE: " + inferred_type);
             var word_index = tokens_and_inferred[2];
             //console.log(" WORD INDEX: " + word_index);
+            
             if (inferred_type && word_index) {
                 let data = await getTypeSuggestions(JSON.stringify(tokens), word_index);
                 complete_list_of_types = getTypes(inferred_type, data);
