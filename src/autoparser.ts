@@ -177,24 +177,24 @@ function fast_linter(checker: ts.TypeChecker, sourceFile: ts.SourceFile, loc, wo
     }
 }
 
-
-//var to_ignore = new Set();
+var to_ignore = new Set();
 function setInitialTokens(file_name: string) {
 
-    // var contents = readfile(file_name);
-    // let parsed = es.parseScript(contents, { range: true, tokens: true});
-    // let tokens = parsed.tokens;
-    // for (let i = 0; i < tokens.length; i++) {
-    //     if (!checkElement(tokens[i], i, tokens)) {
-    //         to_ignore.add(tokens[i].value);
-    //     }
-    // }
+    var contents = readfile(file_name);
+    let parsed = es.parseScript(contents, { range: true, tokens: true});
+    let tokens = parsed.tokens;
+    for (let i = 0; i < tokens.length; i++) {
+        if (!checkElement(tokens[i], i, tokens)) {
+            to_ignore.add(tokens[i].value);
+        }
+    }
     var initial_tokens = [];
     project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
     program = project.getProgram();
     var sourcefile : ts.SourceFile = program.getSourceFile(file_name);
+    
     function nodeChecker(node: ts.Node) {
-        if (node.kind === ts.SyntaxKind.Identifier) {
+        if (node.kind === ts.SyntaxKind.Identifier && !to_ignore.has(node.getText())) {
             initial_tokens.push([node.getText(), node.pos]);
         }
         for (var child of node.getChildren(sourcefile)) {
@@ -219,8 +219,6 @@ async function ast(file_name: string) {
             project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
             program = project.getProgram();
             var sourcefile : ts.SourceFile = program.getSourceFile(file_name);
-            console.log("Word: ", initial_tokens[idx][0]);
-            setInitialTokens(file_name);
             //console.log(sourcefile);
             let checker = program.getTypeChecker();
             var word_of_interest = initial_tokens[idx][0];
