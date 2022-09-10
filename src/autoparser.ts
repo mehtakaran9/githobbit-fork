@@ -3,7 +3,6 @@ import ts from 'typescript';
 import { readFileSync, writeFileSync } from 'fs';
 import * as es from 'esprima';
 import fetch from 'node-fetch';
-import { dir } from 'console';
 
 const PORT_NUM = 9090;
 var LINTER_THRESHOLD_MARGIN = 20;
@@ -15,7 +14,7 @@ var staticAnalysisTypes = 0;
 var modelBasedAnalysisTypes = 0;
 var common = 0;
 var couldNotInfer = 0;
-let importSet = new Set();
+let importSet = new Set<String>();
 importSet.add("require");
 let basicTypes = new Map<ts.SyntaxKind, string>();
 basicTypes.set(ts.SyntaxKind.BooleanKeyword, "boolean");
@@ -183,17 +182,13 @@ var filename = "src/test/test-this.js";
 var contents = readfile(filename);
 var dirPath = "/Users/karanmehta/UCD/GSR GitHobbit/auto/test";
 
-function ignoredElements(file_name) : Set<String> {
-    var to_ignore = new Set<String>();
+function ignoredElements(file_name) {
     var contents = readfile(file_name);
     let parsed = es.parseScript(contents, { range: true, tokens: true});
     let tokens = parsed.tokens;
     for (let i = 0; i < tokens.length; i++) {
-        if (!checkElement(tokens[i], i, tokens)) {
-            to_ignore.add(tokens[i].value);
-        }
+        checkElement(tokens[i], i, tokens);
     }
-    return to_ignore;
 }
 
 function getProgram(dir_path: string) : ts.Program {
@@ -222,14 +217,14 @@ function identifyTokens(file_name : string, to_ignore: Set<String>, program: ts.
 
 async function automatedInserter(file_name: string, dir_path : string) {
     var to_ignore = ignoredElements(file_name);
-    let starting_tokens = identifyTokens(file_name, to_ignore, getProgram(dir_path));
+    let starting_tokens = identifyTokens(file_name, importSet, getProgram(dir_path));
     let length = starting_tokens.length;
     let idx = 0;
     try {
         while (idx != length) {
             //getting the sourcefile
             var program = getProgram(dirPath);
-            let initial_tokens = identifyTokens(file_name, to_ignore, program);
+            let initial_tokens = identifyTokens(file_name, importSet, program);
             var sourcefile : ts.SourceFile = program.getSourceFile(file_name);
 
             //program checker

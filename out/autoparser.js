@@ -204,16 +204,12 @@ var filename = "src/test/test-this.js";
 var contents = readfile(filename);
 var dirPath = "/Users/karanmehta/UCD/GSR GitHobbit/auto/test";
 function ignoredElements(file_name) {
-    var to_ignore = new Set();
     var contents = readfile(file_name);
     let parsed = es.parseScript(contents, { range: true, tokens: true });
     let tokens = parsed.tokens;
     for (let i = 0; i < tokens.length; i++) {
-        if (!checkElement(tokens[i], i, tokens)) {
-            to_ignore.add(tokens[i].value);
-        }
+        checkElement(tokens[i], i, tokens);
     }
-    return to_ignore;
 }
 function getProgram(dir_path) {
     let project = incrementalCompile(dir_path);
@@ -237,14 +233,14 @@ function identifyTokens(file_name, to_ignore, program) {
 }
 async function automatedInserter(file_name, dir_path) {
     var to_ignore = ignoredElements(file_name);
-    let starting_tokens = identifyTokens(file_name, to_ignore, getProgram(dir_path));
+    let starting_tokens = identifyTokens(file_name, importSet, getProgram(dir_path));
     let length = starting_tokens.length;
     let idx = 0;
     try {
         while (idx != length) {
             //getting the sourcefile
             var program = getProgram(dirPath);
-            let initial_tokens = identifyTokens(file_name, to_ignore, program);
+            let initial_tokens = identifyTokens(file_name, importSet, program);
             var sourcefile = program.getSourceFile(file_name);
             //program checker
             let checker = program.getTypeChecker();
