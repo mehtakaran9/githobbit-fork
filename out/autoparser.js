@@ -1,27 +1,4 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -29,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs_readdir_recursive_1 = __importDefault(require("fs-readdir-recursive"));
 const typescript_1 = __importDefault(require("typescript"));
 const fs_1 = require("fs");
-const es = __importStar(require("esprima"));
 const node_fetch_1 = __importDefault(require("node-fetch"));
 const PORT_NUM = 9090;
 var project = null;
@@ -201,38 +177,56 @@ function fast_linter(checker, sourceFile, loc, word) {
         return [tokens, inferred_type, word_index];
     }
 }
-var initial_tokens = [];
+//var to_ignore = new Set();
 function setInitialTokens(file_name) {
-    var contents = readfile(file_name);
-    let parsed = es.parseScript(contents, { range: true, tokens: true });
-    console.log(parsed);
-    for (let i = 0; i < parsed.tokens.length; i++) {
-        if (checkElement(parsed.tokens[i], i, parsed.tokens)) {
-            initial_tokens.push(parsed.tokens[i]);
+    // var contents = readfile(file_name);
+    // let parsed = es.parseScript(contents, { range: true, tokens: true});
+    // let tokens = parsed.tokens;
+    // for (let i = 0; i < tokens.length; i++) {
+    //     if (!checkElement(tokens[i], i, tokens)) {
+    //         to_ignore.add(tokens[i].value);
+    //     }
+    // }
+    var initial_tokens = [];
+    project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
+    program = project.getProgram();
+    var sourcefile = program.getSourceFile(file_name);
+    function nodeChecker(node) {
+        if (node.kind === typescript_1.default.SyntaxKind.Identifier) {
+            initial_tokens.push([node.getText(), node.pos]);
         }
+        for (var child of node.getChildren(sourcefile)) {
+            nodeChecker(child);
+        }
+        return node;
     }
-    console.log(initial_tokens);
+    typescript_1.default.visitNode(sourcefile, nodeChecker);
+    console.log("Tokens right now: ", initial_tokens);
     console.log("Total tokens: ", initial_tokens.length);
+    return initial_tokens;
 }
 var document_position = null;
 var filename = "src/test/test-this.js";
 var contents = readfile(filename);
 async function ast(file_name) {
+    var initial_tokens = setInitialTokens(file_name);
     try {
         for (let idx = 0; idx < initial_tokens.length; idx++) {
             project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
             program = project.getProgram();
             var sourcefile = program.getSourceFile(file_name);
+            console.log("Word: ", initial_tokens[idx][0]);
+            setInitialTokens(file_name);
             //console.log(sourcefile);
             let checker = program.getTypeChecker();
-            var word_of_interest = initial_tokens[idx].value;
-            document_position = initial_tokens[idx].range[0];
+            var word_of_interest = initial_tokens[idx][0];
+            document_position = initial_tokens[idx][1];
             let tokens_and_inferred = fast_linter(checker, sourcefile, document_position, word_of_interest);
             var tokens = tokens_and_inferred[0];
             var inferred_type = tokens_and_inferred[1];
-            console.log("INFERRED TYPE: " + inferred_type);
+            //console.log("INFERRED TYPE: " + inferred_type);
             var word_index = tokens_and_inferred[2];
-            console.log(" WORD INDEX: " + word_index);
+            //console.log(" WORD INDEX: " + word_index);
             if (inferred_type && word_index) {
                 let data = await getTypeSuggestions(JSON.stringify(tokens), word_index);
                 complete_list_of_types = getTypes(inferred_type, data);

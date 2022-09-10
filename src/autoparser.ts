@@ -177,18 +177,35 @@ function fast_linter(checker: ts.TypeChecker, sourceFile: ts.SourceFile, loc, wo
     }
 }
 
-var initial_tokens = [];
+
+//var to_ignore = new Set();
 function setInitialTokens(file_name: string) {
-    var contents = readfile(file_name);
-    let parsed = es.parseScript(contents, { range: true, tokens: true});
-    console.log(parsed);
-    for (let i = 0; i < parsed.tokens.length; i++) {
-        if (checkElement(parsed.tokens[i], i, parsed.tokens)) {
-            initial_tokens.push(parsed.tokens[i]);
+
+    // var contents = readfile(file_name);
+    // let parsed = es.parseScript(contents, { range: true, tokens: true});
+    // let tokens = parsed.tokens;
+    // for (let i = 0; i < tokens.length; i++) {
+    //     if (!checkElement(tokens[i], i, tokens)) {
+    //         to_ignore.add(tokens[i].value);
+    //     }
+    // }
+    var initial_tokens = [];
+    project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
+    program = project.getProgram();
+    var sourcefile : ts.SourceFile = program.getSourceFile(file_name);
+    function nodeChecker(node: ts.Node) {
+        if (node.kind === ts.SyntaxKind.Identifier) {
+            initial_tokens.push([node.getText(), node.pos]);
         }
+        for (var child of node.getChildren(sourcefile)) {
+            nodeChecker(child);
+        }
+        return node;
     }
-    console.log(initial_tokens);
+    ts.visitNode(sourcefile, nodeChecker);
+    console.log("Tokens right now: ", initial_tokens);
     console.log("Total tokens: ", initial_tokens.length);
+    return initial_tokens;
 }
 
 var document_position = null;
@@ -196,23 +213,24 @@ var filename = "src/test/test-this.js";
 var contents = readfile(filename);
 
 async function ast(file_name: string) {
+    var initial_tokens = setInitialTokens(file_name);
     try {
         for (let idx = 0; idx < initial_tokens.length; idx++) {
             project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
             program = project.getProgram();
-            var sourcefile = program.getSourceFile(file_name);
+            var sourcefile : ts.SourceFile = program.getSourceFile(file_name);
+            console.log("Word: ", initial_tokens[idx][0]);
+            setInitialTokens(file_name);
             //console.log(sourcefile);
             let checker = program.getTypeChecker();
-            var word_of_interest = initial_tokens[idx].value;
-            document_position = initial_tokens[idx].range[0]; 
-            
+            var word_of_interest = initial_tokens[idx][0];
+            document_position = initial_tokens[idx][1]; 
             let tokens_and_inferred = fast_linter(checker, sourcefile, document_position, word_of_interest);
             var tokens = tokens_and_inferred[0];
             var inferred_type = tokens_and_inferred[1];
-            console.log("INFERRED TYPE: " + inferred_type);
+            //console.log("INFERRED TYPE: " + inferred_type);
             var word_index = tokens_and_inferred[2];
-            console.log(" WORD INDEX: " + word_index);
-
+            //console.log(" WORD INDEX: " + word_index);
             if (inferred_type && word_index) {
                 let data = await getTypeSuggestions(JSON.stringify(tokens), word_index);
                 complete_list_of_types = getTypes(inferred_type, data);
