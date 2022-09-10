@@ -3,6 +3,7 @@ import ts from 'typescript';
 import { readFileSync, writeFileSync } from 'fs';
 import * as es from 'esprima';
 import fetch from 'node-fetch';
+
 const PORT_NUM = 9090;
 var project = null;
 var program = null;
@@ -180,11 +181,10 @@ var initial_tokens = [];
 function setInitialTokens(file_name: string) {
     var contents = readfile(file_name);
     let parsed = es.parseScript(contents, { range: true, tokens: true});
-    //console.log(parsed);
+    console.log(parsed);
     for (let i = 0; i < parsed.tokens.length; i++) {
-        if (checkElement(parsed.tokens[i], i, parsed.tokens) === true) {
+        if (checkElement(parsed.tokens[i], i, parsed.tokens)) {
             initial_tokens.push(parsed.tokens[i]);
-            
         }
     }
     console.log(initial_tokens);
@@ -197,13 +197,11 @@ var contents = readfile(filename);
 
 async function ast(file_name: string) {
     try {
-        //console.log(initial_tokens);
         for (let idx = 0; idx < initial_tokens.length; idx++) {
             project = incrementalCompile("/Users/karanmehta/UCD/GSR GitHobbit/auto/test");
             program = project.getProgram();
             var sourcefile = program.getSourceFile(file_name);
             //console.log(sourcefile);
-            //console.log("file :" + file_name + " " + "sourcefile :" + sourcefile);
             let checker = program.getTypeChecker();
             var word_of_interest = initial_tokens[idx].value;
             document_position = initial_tokens[idx].range[0]; 
@@ -217,10 +215,8 @@ async function ast(file_name: string) {
 
             if (inferred_type && word_index) {
                 let data = await getTypeSuggestions(JSON.stringify(tokens), word_index);
-                //console.log(data);
                 complete_list_of_types = getTypes(inferred_type, data);
                 contents = insert(sourcefile, complete_list_of_types[0], document_position, word_of_interest);
-                //console.log(contents);
                 file_name = changeExtension(file_name);
                 writeToFile(file_name, contents);
             } else {
@@ -241,20 +237,16 @@ function getTypes(inferred_type: any, data: { probabilities: number[]; type_sugg
     if (inferred_type !== undefined) {
         totalStaticInferences++;
         if (data.type_suggestions[0] === inferred_type) {
-            //console.log("Common type: ", inferred_type);
             common++;
         }
         if (data.probabilities[0] >= 0.90) {
-            //console.log("Model type: ", data.type_suggestions[0]);
             modelBasedAnalysisTypes++;
             complete_list_of_types = data.type_suggestions.concat([inferred_type]);
         } else {
-            //console.log("Static type: ", inferred_type);
             staticAnalysisTypes++;
             complete_list_of_types = [inferred_type].concat(data);
         }
     } else {
-        //console.log("Inferred is null: ", data.type_suggestions[0]);
         modelBasedAnalysisTypes++;
         complete_list_of_types = data.type_suggestions;
     }
@@ -298,8 +290,7 @@ function checkElement(element: any, idx: number, parsed: any) : boolean {
     //     return false;
     // }
 
-    // Handling console.log -- TO DO Handle for different types of statements?
-    if (element.value === "console" || parsed[idx + 1].value === "." || parsed[idx + 2].value === "log") {
+    if (element.value === "console" && parsed[idx + 1].value === "." && parsed[idx + 2].value === "log") {
         return false;
     }
     return true;
@@ -325,7 +316,6 @@ async function getTypeSuggestions(tokens: any, word_index: any) : Promise<any>{
         var params = { input_string: tokens, word_index: word_index };
         const response = await fetch('http://localhost:' + PORT_NUM + '/suggest-types?', { method: 'POST', body: JSON.stringify(params), headers: { 'Content-Type': 'application/json' } });
         let data = await response.json();
-        //console.log(data);
         return data;
     } catch (e) {
         console.log("Could not get response from server for word_index: " + word_index)
@@ -376,17 +366,12 @@ function insert(sourceFile: ts.SourceFile, type: string, loc: number, word: stri
 }
 
 // calling the methods
-
 setInitialTokens(filename);
-ast(filename).then(function (response) {
+ast(filename).then(() => {
     console.log("Could not infer: ", couldNotInfer);
-    console.log("Total Static Suggestions: ", totalStaticInferences);
-    console.log("Total Deep Learner inferences: ", totalDeepLearnerInferences);
+    console.log("Total Static Analysis Inferences: ", totalStaticInferences);
+    console.log("Total Deep Learner Inferences: ", totalDeepLearnerInferences);
     console.log("Selected from static Analysis: ", staticAnalysisTypes);
     console.log("Selected from model based analysis: ", modelBasedAnalysisTypes);
-    console.log("Common selections from static and deep learner: ", common);
+    console.log("Common selections from Static Analysis and Deep Learner: ", common);
 });
-
-//save the entire file here
-
-
