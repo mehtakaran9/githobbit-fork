@@ -5,15 +5,15 @@ import * as es from 'esprima';
 import fetch from 'node-fetch';
 
 const PORT_NUM = 9090;
-var LINTER_THRESHOLD_MARGIN = 20;
-var INSERT_THRESHOLD_MARGIN = 20;
+var LINTER_THRESHOLD_MARGIN : number = 20;
+var INSERT_THRESHOLD_MARGIN : number = 20;
 var complete_list_of_types = [];
-var totalStaticInferences = 0;
-var totalDeepLearnerInferences = 0;
-var staticAnalysisTypes = 0;
-var modelBasedAnalysisTypes = 0;
-var common = 0;
-var couldNotInfer = 0;
+var totalStaticInferences : number = 0;
+var totalDeepLearnerInferences : number = 0;
+var staticAnalysisTypes : number = 0;
+var modelBasedAnalysisTypes : number = 0;
+var common : number = 0;
+var couldNotInfer : number = 0;
 let importSet = new Set<String>();
 importSet.add("require");
 let basicTypes = new Map<ts.SyntaxKind, string>();
@@ -183,9 +183,9 @@ var contents = readfile(filename);
 var dirPath = "/Users/karanmehta/UCD/GSR GitHobbit/auto/test";
 
 function ignoredElements(file_name) {
-    var contents = readfile(file_name);
-    let parsed = es.parseScript(contents, { range: true, tokens: true});
-    let tokens = parsed.tokens;
+    var contents : string = readfile(file_name);
+    let parsed : es.Program = es.parseScript(contents, { range: true, tokens: true});
+    let tokens : es.Token[] = parsed.tokens;
     for (let i = 0; i < tokens.length; i++) {
         checkElement(tokens[i], i, tokens);
     }
@@ -193,7 +193,7 @@ function ignoredElements(file_name) {
 
 function getProgram(dir_path: string) : ts.Program {
     let project = incrementalCompile(dir_path);
-    let program = project.getProgram();
+    let program : ts.Program = project.getProgram();
     return program;
 }
 
@@ -218,8 +218,8 @@ function identifyTokens(file_name : string, to_ignore: Set<String>, program: ts.
 async function automatedInserter(file_name: string, dir_path : string) {
     var to_ignore = ignoredElements(file_name);
     let starting_tokens = identifyTokens(file_name, importSet, getProgram(dir_path));
-    let length = starting_tokens.length;
-    let idx = 0;
+    let length : number = starting_tokens.length;
+    let idx : number = 0;
     try {
         while (idx != length) {
             //getting the sourcefile
@@ -230,11 +230,11 @@ async function automatedInserter(file_name: string, dir_path : string) {
             //program checker
             let checker = program.getTypeChecker();
             //fetching idx as doc position and the word to check annotations for
-            var word_of_interest = initial_tokens[idx][0];
-            var document_position = initial_tokens[idx][1];
+            var word_of_interest : string = initial_tokens[idx][0];
+            var document_position : number = initial_tokens[idx][1];
 
             //return tokens and static analysis result 
-            let tokens_and_inferred = fast_linter(checker, sourcefile, document_position, word_of_interest);
+            let tokens_and_inferred : Array<any> = fast_linter(checker, sourcefile, document_position, word_of_interest);
             
             var tokens = tokens_and_inferred[0];
             var inferred_type = tokens_and_inferred[1];
@@ -284,8 +284,8 @@ function getTypes(inferred_type: any, data: { probabilities: number[]; type_sugg
 }
 
 function changeExtension(name: string): string {
-    var new_file_name = name;
-    var extension = name.split(".").pop();
+    var new_file_name : string = name;
+    var extension : string = name.split(".").pop();
     if (extension === "js") {
         let splitter = name.split(".");
         splitter[splitter.length - 1] = "ts";
@@ -348,8 +348,8 @@ function getType(deeplearnerType: string) {
 }
 
 function insert(sourceFile: ts.SourceFile, type: string, loc: number, word: string): any {
-    var quickReturn = false;
-    var match_identifier = false;
+    var quickReturn : boolean = false;
+    var match_identifier : boolean = false;
     
     const transformer = <T extends ts.Node>(context: ts.TransformationContext) => (rootNode: T) => {
         function visit(node: ts.Node): ts.Node {

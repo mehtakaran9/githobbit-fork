@@ -5,7 +5,7 @@ const path = require('path');
 const packagesDir = path.resolve(__dirname, '../packages');
 const version = require('../package.json').version;
 const files = fs.readdirSync(packagesDir);
-files.forEach((shortName) => {
+files.forEach(shortName => {
     if (!fs.statSync(path.join(packagesDir, shortName)).isDirectory()) {
         return;
     }
