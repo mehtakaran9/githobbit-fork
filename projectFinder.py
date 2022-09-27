@@ -2,6 +2,7 @@
 import json
 from pydriller import *
 import pathlib
+import os
 
 class JSONData:
     def __init__(self, url, path, commit, file):
@@ -33,7 +34,14 @@ for commit in Repository(urls, num_workers = 1000).traverse_commits():
         if (oldPath != None and newPath != None):
             oldExt = pathlib.Path(oldPath).suffix
             newExt = pathlib.Path(newPath).suffix
-            if (oldExt == ".js" and newExt == ".ts"):
-                print(oldPath, newPath)
-            
-    
+            if (oldExt == ".js" and newExt == ".ts" and modifiedFile.source_code_before != None):
+                dirPath = r'/Users/karanmehta/UCD/GSR GitHobbit/auto/files/' + commit.project_name + "/"
+                fileName = os.path.splitext(modifiedFile.filename)[0]
+                if not (os.path.exists(dirPath)):
+                    os.makedirs(dirPath)
+                    old = open(dirPath + fileName + ".js", "w")
+                    old.write(modifiedFile.source_code_before)
+                    old.close()
+                    new = open(dirPath + fileName + ".ts", "w")
+                    new.write(modifiedFile.source_code)
+                    new.close()
