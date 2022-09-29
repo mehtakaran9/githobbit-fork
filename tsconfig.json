@@ -1,5 +1,5 @@
 {
-	"exclude": ["out"],
+	"exclude": ["out", "files"],
 	"compilerOptions": {
 		"esModuleInterop": true,
 		"module": "commonjs",
