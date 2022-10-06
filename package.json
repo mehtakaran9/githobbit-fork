@@ -38,6 +38,8 @@
   },
   "dependencies": {
     "@angular/cli": "^13.3.5",
+    "ember": "^1.0.3",
+    "ember-decorators": "^6.1.1",
     "esprima": "^4.0.1",
     "express": "^4.18.1",
     "fs-readdir-recursive": "^1.1.0",

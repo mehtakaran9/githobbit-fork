@@ -43,6 +43,10 @@ ignoredTypes.add(ts.SyntaxKind.TypeOperator);
 ignoredTypes.add(ts.SyntaxKind.IntersectionType);
 ignoredTypes.add(ts.SyntaxKind.TypeQuery);
 const filteredFiles = read(__dirname).filter(item => item.endsWith(".js"));
+var filename = "src/test/test-this.js";
+var contents = readfile(filename);
+var dirPath = "/Users/karanmehta/UCD/auto/githobbit";
+
 
 function readfile(fileName: string): any {
     return readFileSync(fileName, 'utf-8');
@@ -178,9 +182,6 @@ function fast_linter(checker: ts.TypeChecker, sourceFile: ts.SourceFile, loc, wo
     }
 }
 
-var filename = "src/test/test-this.js";
-var contents = readfile(filename);
-var dirPath = "/Users/karanmehta/UCD/GSR GitHobbit/auto/test";
 
 function ignoredElements(file_name) {
     var contents : string = readfile(file_name);

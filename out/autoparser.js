@@ -70,6 +70,9 @@ ignoredTypes.add(typescript_1.default.SyntaxKind.TypeOperator);
 ignoredTypes.add(typescript_1.default.SyntaxKind.IntersectionType);
 ignoredTypes.add(typescript_1.default.SyntaxKind.TypeQuery);
 const filteredFiles = (0, fs_readdir_recursive_1.default)(__dirname).filter(item => item.endsWith(".js"));
+var filename = "src/test/test-this.js";
+var contents = readfile(filename);
+var dirPath = "/Users/karanmehta/UCD/auto/githobbit";
 function readfile(fileName) {
     return (0, fs_1.readFileSync)(fileName, 'utf-8');
 }
@@ -200,9 +203,6 @@ function fast_linter(checker, sourceFile, loc, word) {
         return [tokens, inferred_type, word_index];
     }
 }
-var filename = "src/test/test-this.js";
-var contents = readfile(filename);
-var dirPath = "/Users/karanmehta/UCD/GSR GitHobbit/auto/test";
 function ignoredElements(file_name) {
     var contents = readfile(file_name);
     let parsed = es.parseScript(contents, { range: true, tokens: true });
