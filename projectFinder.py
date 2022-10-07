@@ -23,6 +23,8 @@ for json_str in json_list:
 urls = list(urls)
 
 def addFiles(dirPath, fileName, oldFileContent, newFileContent):
+    if fileName == None or oldFileContent == None or newFileContent == None:
+        return
     if (os.path.exists(dirPath) == False):
         os.makedirs(dirPath)
     fileName = dirPath + fileName
@@ -46,9 +48,9 @@ for url in tqdm(urls):
                 newExt = Path(newPath).suffix
                 if (oldExt == ".js" and newExt == ".ts" and modifiedFile.source_code_before != None):
                     addFiles(dirPath, os.path.splitext(modifiedFile.filename)[0], modifiedFile.source_code_before, modifiedFile.source_code)
-            elif (modifiedFile.source_code_before == None and Path(newPath).suffix == ".ts"):
+            elif (modifiedFile.source_code_before == None and newPath != None and Path(newPath).suffix == ".ts"):
                 newFiles.add(modifiedFile)
-            elif (modifiedFile.source_code == None and Path(oldPath).suffix == ".js"):
+            elif (modifiedFile.source_code == None and oldPath != None and Path(oldPath).suffix == ".js"):
                 oldFiles.add(modifiedFile)
                 
         for newFile in newFiles:
