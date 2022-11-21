@@ -1,6 +1,7 @@
 import read from 'fs-readdir-recursive';
 import ts from 'typescript';
-import { readFileSync, writeFileSync } from 'fs';
+import { argv } from 'process';
+import * as fs from 'fs';
 import * as es from 'esprima';
 import fetch from 'node-fetch';
 
@@ -42,14 +43,39 @@ ignoredTypes.add(ts.SyntaxKind.TypeOperator);
 // ignoredTypes.add(ts.SyntaxKind.NullKeyword);
 ignoredTypes.add(ts.SyntaxKind.IntersectionType);
 ignoredTypes.add(ts.SyntaxKind.TypeQuery);
-const filteredFiles = read(__dirname).filter(item => item.endsWith(".js"));
-var filename = "src/test/test-this.js";
-var contents = readfile(filename);
-var dirPath = "/Users/karanmehta/UCD/auto/githobbit";
 
+const dirPath : string = argv[2];
+const filteredFiles = read(dirPath).filter(item => item.endsWith(".js") && !item.includes("node_modules") && !item.includes("autoparser.js"));
+
+// var filename = "src/test/test-this.js";
+// var contents = readfile(filename);
+// var dirPath = "/Users/karanmehta/UCD/auto/githobbit";
+
+// function init() {
+//     readfile("./annotationFilePaths.txt").split(/\r?\n/).forEach(line => {
+//         var dir : string = __dirname + '/temp/';
+//         if (!fs.existsSync(dir)) {
+//             fs.mkdirSync(dir);
+//         } 
+//         let jsFile : string = changeExtension(line, "ts", "js");
+//         let newJsPath : string = dir + jsFile.split('/').pop();
+//         let newTsPath : string = dir + "original_" + line.split('/').pop();
+//         fs.copyFileSync(line, newTsPath)
+//         fs.copyFileSync(jsFile, newJsPath);
+//         automatedInserter(newJsPath, dir).then(() => {
+//             console.log("Could not infer: ", couldNotInfer);
+//             console.log("Total Static Analysis Inferences: ", totalStaticInferences);
+//             console.log("Total Deep Learner Inferences: ", totalDeepLearnerInferences);
+//             console.log("Selected from static Analysis: ", staticAnalysisTypes);
+//             console.log("Selected from model based analysis: ", modelBasedAnalysisTypes);
+//             console.log("Common selections from Static Analysis and Deep Learner: ", common);
+//             fs.rmSync(dir, {recursive : true, force: true});
+//         });
+//     });
+// }
 
 function readfile(fileName: string): any {
-    return readFileSync(fileName, 'utf-8');
+    return fs.readFileSync(fileName, 'utf-8');
 }
 
 function parseEntityName(n: ts.EntityName): string {
@@ -183,7 +209,7 @@ function fast_linter(checker: ts.TypeChecker, sourceFile: ts.SourceFile, loc, wo
 }
 
 
-function ignoredElements(file_name) {
+function ignoredElements(file_name: string) {
     var contents : string = readfile(file_name);
     let parsed : es.Program = es.parseScript(contents, { range: true, tokens: true});
     let tokens : es.Token[] = parsed.tokens;
@@ -201,7 +227,6 @@ function getProgram(dir_path: string) : ts.Program {
 function identifyTokens(file_name : string, to_ignore: Set<String>, program: ts.Program) {
     let tokens = [];
     var sourcefile : ts.SourceFile = program.getSourceFile(file_name);
-    
     function nodeChecker(node: ts.Node) {
         if (node.kind === ts.SyntaxKind.Identifier && !to_ignore.has(node.getText())) {
             tokens.push([node.getText(), node.pos]);
@@ -224,7 +249,7 @@ async function automatedInserter(file_name: string, dir_path : string) {
     try {
         while (idx != length) {
             //getting the sourcefile
-            var program = getProgram(dirPath);
+            var program = getProgram(dir_path);
             let initial_tokens = identifyTokens(file_name, importSet, program);
             var sourcefile : ts.SourceFile = program.getSourceFile(file_name);
 
@@ -239,15 +264,13 @@ async function automatedInserter(file_name: string, dir_path : string) {
             
             var tokens = tokens_and_inferred[0];
             var inferred_type = tokens_and_inferred[1];
-            console.log("INFERRED TYPE: " + inferred_type);
             var word_index = tokens_and_inferred[2];
-            console.log(" WORD INDEX: " + word_index);
-            
+            console.log(word_of_interest + " INFERRED TYPE: " + inferred_type + " WORD INDEX: " + word_index);
             if (inferred_type && word_index) {
                 let data = await getTypeSuggestions(JSON.stringify(tokens), word_index);
                 complete_list_of_types = getTypes(inferred_type, data);
-                contents = insert(sourcefile, complete_list_of_types[0], document_position, word_of_interest);
-                file_name = changeExtension(file_name);
+                let contents = insert(sourcefile, complete_list_of_types[0], document_position, word_of_interest);
+                file_name = changeExtension(file_name, "js", "ts");
                 writeToFile(file_name, contents);
             } else {
                 console.log("Could not infer type for: ", initial_tokens[idx]);
@@ -284,12 +307,12 @@ function getTypes(inferred_type: any, data: { probabilities: number[]; type_sugg
     return complete_list_of_types;
 }
 
-function changeExtension(name: string): string {
+function changeExtension(name: string, from: string, to: string): string {
     var new_file_name : string = name;
     var extension : string = name.split(".").pop();
-    if (extension === "js") {
+    if (extension === from) {
         let splitter = name.split(".");
-        splitter[splitter.length - 1] = "ts";
+        splitter[splitter.length - 1] = to;
         new_file_name = "";
         for (let i = 0; i < splitter.length; i++) {
             new_file_name += i !== splitter.length - 1 ? splitter[i] + "." : splitter[i];
@@ -299,7 +322,7 @@ function changeExtension(name: string): string {
 }
 
 function writeToFile(destinationFilePath: string, textToWrite: string) {
-    writeFileSync(destinationFilePath, textToWrite);
+    fs.writeFileSync(destinationFilePath, textToWrite);
 }
 
 function checkElement(element: any, idx: number, parsed: any) : boolean {
@@ -385,12 +408,17 @@ function insert(sourceFile: ts.SourceFile, type: string, loc: number, word: stri
     return printer.printFile(transformedSourceFile);
 }
 
+
+filteredFiles.forEach(file => {
+    automatedInserter(dirPath + "/" + file, dirPath).then(() => {
+        console.log("Could not infer: ", couldNotInfer);
+        console.log("Total Static Analysis Inferences: ", totalStaticInferences);
+        console.log("Total Deep Learner Inferences: ", totalDeepLearnerInferences);
+        console.log("Selected from static Analysis: ", staticAnalysisTypes);
+        console.log("Selected from model based analysis: ", modelBasedAnalysisTypes);
+        console.log("Common selections from Static Analysis and Deep Learner: ", common);
+    });
+})
+
 // calling the methods
-automatedInserter(filename, dirPath).then(() => {
-    console.log("Could not infer: ", couldNotInfer);
-    console.log("Total Static Analysis Inferences: ", totalStaticInferences);
-    console.log("Total Deep Learner Inferences: ", totalDeepLearnerInferences);
-    console.log("Selected from static Analysis: ", staticAnalysisTypes);
-    console.log("Selected from model based analysis: ", modelBasedAnalysisTypes);
-    console.log("Common selections from Static Analysis and Deep Learner: ", common);
-});
+// TEST
