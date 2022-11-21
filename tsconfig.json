@@ -1,5 +1,5 @@
 {
-	"exclude": ["out"],
+	"exclude": ["out", "files", "ts-scripts", "node_modules"],
 	"compilerOptions": {
 		"esModuleInterop": true,
 		"module": "commonjs",

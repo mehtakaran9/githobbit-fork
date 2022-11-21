@@ -38,10 +38,17 @@
   },
   "dependencies": {
     "@angular/cli": "^13.3.5",
+    "diffchecker": "^0.2.8",
+    "ember": "^1.0.3",
+    "ember-decorators": "^6.1.1",
     "esprima": "^4.0.1",
     "express": "^4.18.1",
     "fs-readdir-recursive": "^1.1.0",
+    "js-levenshtein": "^1.1.6",
     "node-fetch": "^2.6.7",
+    "node-os-walk": "^1.0.2",
+    "ts-treemap": "^1.1.0",
+    "tsutils": "^3.21.0",
     "vscode": "^1.1.37"
   }
 }
