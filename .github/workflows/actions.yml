@@ -13,6 +13,10 @@ on:
         required: true
         type: string
         default: 'main'
+      target-branch:
+        required: true
+        type: string
+        default: githobbit-target
       file-mode:
         required: true
         type: boolean
@@ -67,13 +71,19 @@ jobs:
           cd typer
           npm ci
           node out/autoparser.js ../repo
+      - name: setup git config
+        run: |
+          cd repo
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
       - name: commit
         run: |
           # Stage the file, commit and push
           cd repo
+          git checkout -b ${{ inputs.target-branch }}
           git add .
           git commit -m "AUTO COMMITTED"
-          git push origin ${{ inputs.branch }}      
+          git push origin ${{ inputs.target-branch }}
 
 
   # file-typer:
