@@ -46,10 +46,9 @@ jobs:
         if: steps.check_files.outputs.files_exists == 'true'
         run: npm ci
       - name: Forking the repo
-        run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=${{ secrets.REPO_ORG }} --remote
+        run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=githobbit-repos --remote
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
       - name: Checkout to the target branch
         run: |
           cd ./${{ inputs.repository }}
