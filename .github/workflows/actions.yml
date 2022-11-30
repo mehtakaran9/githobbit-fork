@@ -47,9 +47,11 @@ jobs:
         run: npm ci
       - name: Forking the repo
         run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=$REPO_ORG --remote
+        with:
+          REPO_ORG: ${{ secrets.REPO_ORG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO_ORG: ${{ secrets.REPO_ORG }}
+          
       - name: Checkout to the target branch
         run: |
           cd ./${{ inputs.repository }}
