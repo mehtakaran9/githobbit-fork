@@ -46,9 +46,7 @@ jobs:
         if: steps.check_files.outputs.files_exists == 'true'
         run: npm ci
       - name: Forking the repo
-        run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=$REPO_ORG --remote
-        with:
-          REPO_ORG: ${{ secrets.REPO_ORG }}
+        run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=${{ secrets.REPO_ORG }} --remote
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
