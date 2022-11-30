@@ -81,10 +81,11 @@ jobs:
           # Stage the file, commit and push
           cd repo
           git checkout -b ${{ inputs.target-branch }}
-          git add .
-          git commit -m "AUTO COMMITTED"
-          git push origin ${{ inputs.target-branch }}
-
+          git add -A
+          if ! git diff-index --quiet HEAD; then
+            git commit -m "AUTO COMMITTED"
+            git push origin ${{ inputs.target-branch }}
+          fi
 
   # file-typer:
   #   runs-on: ubuntu-latest
