@@ -47,7 +47,7 @@ jobs:
       - name: forking the repo
         uses: actions/checkout@v3
         with:
-          repository: ${{ inputs.owner }}/${{ inputs.repository }}
+          repository: mehtakaran9/githobbit
       - name: ls 
         run: echo $(ls)    
       - name: Forking the repo
