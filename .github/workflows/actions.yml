@@ -35,8 +35,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 16
-      - name: ls 
-        run: echo $(ls)
+      
       - name: Check file existence
         id: check_files
         uses: andstor/file-existence-action@v1
@@ -45,6 +44,12 @@ jobs:
       - name: Install dependencies
         if: steps.check_files.outputs.files_exists == 'true'
         run: npm ci
+      - name: forking the repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.owner }}/${{ inputs.repository }}
+      - name: ls 
+        run: echo $(ls)    
       - name: Forking the repo
         run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=githobbit-repos --remote
         env:
