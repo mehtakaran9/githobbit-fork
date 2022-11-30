@@ -51,10 +51,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: mehtakaran9/githobbit
-          path: typer
-   
-      # - name: ls 
-      #   run: echo $(ls typer)            
+          path: typer          
       # - name: Forking the repo
       #   run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=githobbit-repos --remote
       #   env:
@@ -69,9 +66,7 @@ jobs:
         run: |
           cd typer
           npm ci
-          node out/autoparser.js ../${{ inputs.repository }}
-      - name: ls 
-        run: echo $(ls) 
+          node out/autoparser.js ../repo
       - name: commit
         run: |
           # Stage the file, commit and push
