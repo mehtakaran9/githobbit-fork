@@ -35,7 +35,14 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 16
+      - name: Check file existence
+        id: check_files
+        uses: andstor/file-existence-action@v1
+        with:
+          files: "package-lock.json"
+        working-directory: ${{ inputs.repository }}
       - name: Install dependencies
+        if: steps.check_files.outputs.files_exists == 'true'
         run: npm ci
       - name: Forking the repo
         run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=$GITHUB_ORG --remote
