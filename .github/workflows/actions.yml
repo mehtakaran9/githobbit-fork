@@ -1,0 +1,136 @@
+name: Run automated typer
+
+on:
+  workflow_call:
+    inputs:
+      owner: 
+        required: true
+        type: string
+      repository:
+        required: true
+        type: string
+      branch:
+        required: true
+        type: string
+        default: 'main'
+      file-mode:
+        required: true
+        type: boolean
+        default: false
+      files:
+        required: false
+        type: string
+      working-directory:
+        required: false
+        type: string
+        default: '.'
+
+jobs:
+  directory-typer:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.working-directory }} != null && {{ inputs.file-mode }} == false
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js 16.x
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16.x
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Forking the repo
+        run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=$GITHUB_ORG --remote
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ORG: ${{ secrets.GITHUB_ORG }}
+      - name: Checkout to the target branch
+        run: |
+          cd ./${{ inputs.repository }}
+          git checkout ${{ inputs.branch }}
+      - name: Setup typescript
+        run: npm install typescript --save-dev
+      - name: Run the typer
+        run: node out/autoparser.js ../${{ inputs.repository }}
+      - name: commit
+        run: |
+          # Stage the file, commit and push
+          git add .
+          git commit -m "AUTO COMMITTED"
+          git push origin ${{ inputs.branch }}      
+
+
+  # file-typer:
+  #   runs-on: ubuntu-latest
+  #   if: $ {{ inputs.file-mode }} == true
+
+  # deploy:
+  #   name: Deploy to AWS ECS Fargate
+  #   runs-on: ubuntu-latest
+
+  #   # accommodating monorepo, this sets the working directory at the job level, for multi repo, defaults to "."
+  #   defaults:
+  #     run:
+  #       working-directory: ${{ inputs.working-directory }}
+
+  #   # important to specify the environment here so workflow knows where to deploy your artifact to.
+  #   # default environment to "dev" if it is not passed in through workflow_dispatch manual trigger
+  #   environment: ${{ inputs.env || 'dev' }}
+
+  #   # only execute if PR is merged or manual trigger
+  #   if: github.event.pull_request.merged || inputs.env != null
+
+  #   steps:
+  #     - name: Harden Runner
+  #       uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
+  #       with:
+  #         egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+
+  #     - name: Checkout Code
+  #       uses: actions/checkout@d0651293c4a5a52e711f25b41b05b2212f385d28
+
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@67fbcbb121271f7775d2e7715933280b06314838
+  #       with:
+  #         role-to-assume: ${{ secrets.ROLE_TO_ASSUME }}
+  #         aws-region: ${{ secrets.AWS_REGION }}
+
+  #     - name: Set project version as environment variable
+  #       run: echo "PROJECT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
+
+  #     - name: Print debug info
+  #       run: |
+  #         echo environment is ${{ inputs.env }}
+  #         echo working_directory is ${{ inputs.working-directory }}
+  #         echo project version is ${{ env.PROJECT_VERSION }}
+  #         echo github.event.pull_request.merged is ${{ github.event.pull_request.merged }}
+  #     - name: Download task definition
+  #       run: |
+  #         aws ecs describe-task-definition --task-definition ${{ secrets.ECS_TASK_DEFINITION }} --query taskDefinition | jq -r 'del(
+  #                 .taskDefinitionArn,
+  #                 .requiresAttributes,
+  #                 .compatibilities,
+  #                 .revision,
+  #                 .status,
+  #                 .registeredAt,
+  #                 .registeredBy
+  #               )' > task-definition.json
+  #     - name: Fill in the new image ID and pass in the environment variable in the ECS task definition
+  #       id: task-def
+  #       uses: aws-actions/amazon-ecs-render-task-definition@f15ed65f9cc12455139db0f8e8ff6f6aaad6dfda
+  #       with:
+  #         # important to specify working directory here to accommodate monorepo
+  #         task-definition: ${{ inputs.working-directory }}/task-definition.json
+  #         container-name: ${{ secrets.CONTAINER_NAME }}
+  #         image: ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY_NAME }}:${{ env.PROJECT_VERSION }}
+  #         # this ENVIRONMENT is passed into the active spring profile in start-service.sh in the startup command,
+  #         # so it knows which application yml to retrieve based on the active spring profile
+  #         environment-variables: |
+  #           ENVIRONMENT=${{ inputs.env || 'dev' }}
+  #     - name: Deploy Amazon ECS task definition
+  #       uses: aws-actions/amazon-ecs-deploy-task-definition@3cc43061dd30ad47511af35bca46e2c1435b9035
+  #       with:
+  #         task-definition: ${{ steps.task-def.outputs.task-definition }}
+  #         service: ${{ secrets.ECS_SERVICE }}
+  #         cluster: ${{ secrets.ECS_CLUSTER }}
+  #         wait-for-service-stability: true
