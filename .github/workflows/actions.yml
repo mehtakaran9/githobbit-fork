@@ -30,7 +30,10 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ inputs.working-directory }} != null && {{ inputs.file-mode }} == false
     steps:
-      - uses: actions/checkout@v3
+      - name: checkout to-type repository
+        uses: actions/checkout@v3
+        with:
+          path: repo
       - name: Use Node.js 16.x
         uses: actions/setup-node@v3
         with:
@@ -49,17 +52,17 @@ jobs:
         with:
           repository: mehtakaran9/githobbit
           path: typer
-      - name: ls 
-        run: echo $(ls)    
-      - name: ls 
-        run: echo $(ls typer)            
-      - name: Forking the repo
-        run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=githobbit-repos --remote
-        env:
-          GH_TOKEN: ${{ github.token }}
+      # - name: ls 
+      #   run: echo $(ls)    
+      # - name: ls 
+      #   run: echo $(ls typer)            
+      # - name: Forking the repo
+      #   run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=githobbit-repos --remote
+      #   env:
+      #     GH_TOKEN: ${{ github.token }}
       - name: Checkout to the target branch
         run: |
-          cd ./${{ inputs.repository }}
+          cd ./repo
           git checkout ${{ inputs.branch }}
       - name: Setup typescript
         run: npm install typescript --save-dev
