@@ -46,10 +46,10 @@ jobs:
         if: steps.check_files.outputs.files_exists == 'true'
         run: npm ci
       - name: Forking the repo
-        run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=$GITHUB_ORG --remote
+        run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=$REPO_ORG --remote
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ORG: ${{ secrets.GITHUB_ORG }}
+          REPO_ORG: ${{ secrets.REPO_ORG }}
       - name: Checkout to the target branch
         run: |
           cd ./${{ inputs.repository }}
