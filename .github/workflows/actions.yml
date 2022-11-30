@@ -52,8 +52,7 @@ jobs:
         with:
           repository: mehtakaran9/githobbit
           path: typer
-      # - name: ls 
-      #   run: echo $(ls)    
+   
       # - name: ls 
       #   run: echo $(ls typer)            
       # - name: Forking the repo
@@ -71,9 +70,12 @@ jobs:
           cd typer
           npm ci
           node out/autoparser.js ../${{ inputs.repository }}
+      - name: ls 
+        run: echo $(ls) 
       - name: commit
         run: |
           # Stage the file, commit and push
+          cd repo
           git add .
           git commit -m "AUTO COMMITTED"
           git push origin ${{ inputs.branch }}      
