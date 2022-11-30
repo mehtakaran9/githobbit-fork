@@ -67,7 +67,10 @@ jobs:
       - name: Setup typescript
         run: npm install typescript --save-dev
       - name: Run the typer
-        run: node out/autoparser.js ../${{ inputs.repository }}
+        run: |
+          cd typer
+          npm ci
+          node out/autoparser.js ../${{ inputs.repository }}
       - name: commit
         run: |
           # Stage the file, commit and push
