@@ -16,6 +16,8 @@ var modelBasedAnalysisTypes : number = 0;
 var common : number = 0;
 var couldNotInfer : number = 0;
 let importSet = new Set<String>();
+var LOCALHOST_BASE_URL = 'http://localhost:'
+var REMOTE_BASE_URL = 'http://24.199.112.38:'
 importSet.add("require");
 let basicTypes = new Map<ts.SyntaxKind, string>();
 basicTypes.set(ts.SyntaxKind.BooleanKeyword, "boolean");
@@ -279,7 +281,7 @@ async function automatedInserter(file_name: string, dir_path : string) {
             idx++;
         }
     } catch (e) {
-        console.log("Could not process the file");
+        console.log("Could not process the file", e);
     }
 }
 
@@ -357,7 +359,7 @@ function incrementalCompile(dir: string): any {
 async function getTypeSuggestions(tokens: any, word_index: any) : Promise<any>{
     try {
         var params = { input_string: tokens, word_index: word_index };
-        const response = await fetch('http://localhost:' + PORT_NUM + '/suggest-types?', { method: 'POST', body: JSON.stringify(params), headers: { 'Content-Type': 'application/json' } });
+        const response = await fetch(REMOTE_BASE_URL + PORT_NUM + '/suggest-types?', { method: 'POST', body: JSON.stringify(params), headers: { 'Content-Type': 'application/json' } });
         let data = await response.json();
         return data;
     } catch (e) {
@@ -410,6 +412,7 @@ function insert(sourceFile: ts.SourceFile, type: string, loc: number, word: stri
 
 
 filteredFiles.forEach(file => {
+    console.log("Current File: " + dirPath + "/" + file)
     automatedInserter(dirPath + "/" + file, dirPath).then(() => {
         console.log("Could not infer: ", couldNotInfer);
         console.log("Total Static Analysis Inferences: ", totalStaticInferences);
