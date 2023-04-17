@@ -89,7 +89,9 @@ jobs:
             git push origin ${{ inputs.target-branch }}
           fi
       - name: cd into repo
-        run: cd repo
+        run: |
+          cd repo
+          ls -a
       - name: create a pull request
         uses: devops-infra/action-pull-request@v0.5.5
         with:
