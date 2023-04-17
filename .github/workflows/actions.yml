@@ -88,6 +88,19 @@ jobs:
             git commit -m "AUTO COMMITTED"
             git push origin ${{ inputs.target-branch }}
           fi
+          - name: Run the Action
+      - name: create a pull request
+        uses: devops-infra/action-pull-request@v0.5.5
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          source_branch: ${{ inputs.target-branch }}
+          target_branch: ${{ inputs.branch }}
+          title: AUTOMATED PULL REQUEST
+          body: "**Automated pull request**"
+          label: enhancement
+          get_diff: true
+          ignore_users: "dependabot"
+          allow_no_diff: false
 
   # file-typer:
   #   runs-on: ubuntu-latest
