@@ -67,7 +67,9 @@ jobs:
       - name: Setup typescript
         run: npm install typescript --save-dev
       - name: Copy tsconfig.json
-        run: cp ../../tsconfig.json ./repo
+        run: |
+          ls -a
+          cp ../../tsconfig.json ./repo
       - name: Run the typer
         run: |
           cd typer
