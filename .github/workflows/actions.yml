@@ -32,6 +32,7 @@ on:
 jobs:
   directory-typer:
     runs-on: ubuntu-latest
+    environment: test
     if: ${{ inputs.working-directory }} != null && {{ inputs.file-mode }} == false
     steps:
       - uses: tibdex/github-app-token@v1
