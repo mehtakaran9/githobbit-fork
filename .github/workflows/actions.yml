@@ -47,7 +47,7 @@ jobs:
         id: check_files
         uses: andstor/file-existence-action@v1
         with:
-          files: "package-lock.json"
+          files: package-lock.json
       - name: Install dependencies
         if: steps.check_files.outputs.files_exists == 'true'
         run: npm ci
@@ -56,12 +56,13 @@ jobs:
         with:
           repository: mehtakaran9/githobbit
           path: typer          
-      # - name: Forking the repo
-      #   run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=githobbit-repos --remote
-      #   env:
-      #     GH_TOKEN: ${{ github.token }}
+      - name: Forking the repo
+        run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=githobbit-repos --remote
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Checkout to the target branch
         run: |
+          ls -a
           cd ./repo
           git checkout ${{ inputs.branch }}
       - name: Setup typescript
@@ -102,7 +103,7 @@ jobs:
           body: "**Automated pull request**"
           label: enhancement
           get_diff: true
-          ignore_users: "dependabot"
+          ignore_users: dependabot
           allow_no_diff: false
 
   # file-typer:
