@@ -66,7 +66,7 @@ jobs:
       - name: Forking the repo
         run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=githobbit-repos --remote
         env:
-          GH_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
       - name: Checkout to the target branch
         run: |
           ls -a
