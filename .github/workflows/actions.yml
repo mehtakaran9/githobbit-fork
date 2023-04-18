@@ -29,6 +29,11 @@ on:
         type: string
         default: '.'
 
+permissions:
+  id-token: write
+  actions: write
+  pull-requests: write
+
 jobs:
   directory-typer:
     runs-on: ubuntu-latest
