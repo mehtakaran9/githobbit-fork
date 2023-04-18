@@ -56,7 +56,7 @@ jobs:
           repository: mehtakaran9/githobbit
           path: typer          
       - name: Forking the repo
-        run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=githobbit-repos --remote
+        run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --remote
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Checkout to the target branch
