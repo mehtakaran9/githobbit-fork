@@ -12,15 +12,12 @@ on:
       branch:
         required: true
         type: string
-        default: 'main'
       target-branch:
         required: true
         type: string
-        default: githobbit-target
       file-mode:
         required: true
         type: boolean
-        default: false
       files:
         required: false
         type: string
@@ -59,11 +56,14 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: mehtakaran9/githobbit
-          path: typer          
-      - name: Forking the repo
-        run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --remote
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          path: typer
+      - name: forker
+        uses: actions/checkout@v3
+        with:
+          repository: mehtakaran9/githobbit-repositories
+          path: repositories
+      # - name: Forking the repo
+      #   run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=githobbit-repos --remote
       - name: Checkout to the target branch
         run: |
           ls -a
@@ -86,17 +86,14 @@ jobs:
       - name: commit
         run: |
           # Stage the file, commit and push
-          cd repo
+          cd repositories
           git checkout -b ${{ inputs.target-branch }}
+          cp ../repo .
           git add -A
           if ! git diff-index --quiet HEAD; then
             git commit -m "AUTO COMMITTED"
             git push origin ${{ inputs.target-branch }}
           fi
-      - name: cd into repo
-        run: |
-          cd repo
-          ls -a
       - name: create a pull request
         uses: devops-infra/action-pull-request@v0.5.5
         with:
