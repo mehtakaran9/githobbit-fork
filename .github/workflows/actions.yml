@@ -88,7 +88,7 @@ jobs:
           # Stage the file, commit and push
           cd repositories
           git checkout -b ${{ inputs.target-branch }}
-          cp ../repo .
+          cp -R ../repo .
           git add -A
           if ! git diff-index --quiet HEAD; then
             git commit -m "AUTO COMMITTED"
