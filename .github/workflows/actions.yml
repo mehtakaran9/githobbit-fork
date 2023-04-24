@@ -25,6 +25,10 @@ on:
         required: false
         type: string
         default: '.'
+    secrets:
+      token:
+        required: true
+
 
 permissions:
   id-token: write
@@ -34,7 +38,7 @@ permissions:
 jobs:
   directory-typer:
     runs-on: ubuntu-latest
-    if: ${{ inputs.working-directory }} != null && {{ inputs.file-mode }} == false
+    if: ${{ inputs.working-directory }} != null && ${{ inputs.file-mode }} == false
     steps:
       - name: checkout to-type repository
         uses: actions/checkout@v3
@@ -62,8 +66,11 @@ jobs:
         with:
           repository: mehtakaran9/githobbit-repositories
           path: repositories
-      # - name: Forking the repo
-      #   run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --org=githobbit-repos --remote
+      - name: Forking the repo
+        run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --remote
+        env:
+          GITHUB_TOKEN: ${{ secrets.token }}
+
       - name: Checkout to the target branch
         run: |
           ls -a
