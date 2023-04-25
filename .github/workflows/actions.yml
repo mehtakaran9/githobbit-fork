@@ -47,8 +47,9 @@ jobs:
           gh repo clone ${{ inputs.owner}}/${{ inputs.repository }} original_repo
           cp -R original_repo/. ${{ inputs.repository }}-fork
           cd ${{ inputs.repository }}-fork
+          git checkout ${{ inputs.branch }}
           git remote remove origin
-          gh repo create --source . --public --include-all-branches
+          gh repo create --source . --public
           # View Remote Info
           git remote -v
           git config user.name "GitHub Actions Bot"
