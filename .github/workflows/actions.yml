@@ -57,6 +57,7 @@ jobs:
           # Add a dummy file
           git checkout ${{ inputs.branch }}
           touch ${{ inputs.repository }}-fork.md
+          git add ${{ inputs.repository }}-fork.md
           git commit -am "AUTO COMMIT"
           git push -u origin ${{ inputs.branch }}
           
