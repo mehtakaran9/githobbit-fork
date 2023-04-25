@@ -30,7 +30,7 @@ on:
         required: true
 
 env:
-  GH_TOKEN: ${{ secrets.ACCESS_TOKEN_PAT_CLASSIC }}
+  GH_TOKEN: ${{ secrets.token }}
 
 jobs:
   directory-typer:
@@ -42,14 +42,14 @@ jobs:
       #   run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --remote
       - name: git fork
         run: |
-          git clone https://github.com/${{ inputs.owner}}/${{ inputs.repository }} repo
-          cd repo
+          mkdir ${{ inputs.repository }}-fork
+          gh repo clone ${{ inputs.owner}}/${{ inputs.repository }} original_repo
+          cd original_repo
+          cp -R `ls -A | grep -v ".git"` ../${{ inputs.repository }}-fork
+          cd ../${{ inputs.repository }}-fork
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
-          git remote set-url origin https://github.com/${{ inputs.username }}/${{ inputs.repository}}-fork
-          git remote add upstream https://github.com/${{ inputs.owner}}/${{ inputs.repository }}
-          git push origin master
-          git push --all
+          gh repo create --public --source .
       # - name: checkout to-type repository
       #   uses: actions/checkout@v3
       #   with:
