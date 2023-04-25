@@ -45,7 +45,7 @@ jobs:
           mkdir ${{ inputs.repository }}-fork
           gh repo clone ${{ inputs.owner}}/${{ inputs.repository }} original_repo
           cd original_repo
-          cp -R `ls -A | grep -v ".git"` ../${{ inputs.repository }}-fork
+          cp -R ../${{ inputs.repository }}-fork
           cd ../${{ inputs.repository }}-fork
           ls -a
           gh repo create --public --source .
