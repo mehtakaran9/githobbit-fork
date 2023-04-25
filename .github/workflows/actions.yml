@@ -25,25 +25,23 @@ on:
         required: false
         type: string
         default: '.'
-    secrets:
-      token:
-        required: true
 
-
-permissions:
-  id-token: write
-  actions: write
-  pull-requests: write
+env:
+  GH_TOKEN: ${{ secrets.ACCESS_TOKEN_PAT_CLASSIC }}
 
 jobs:
   directory-typer:
     runs-on: ubuntu-latest
     if: ${{ inputs.working-directory }} != null && ${{ inputs.file-mode }} == false
     steps:
+      # Add forking step
+      - name: Forking the repo
+        run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --remote
       - name: checkout to-type repository
         uses: actions/checkout@v3
         with:
           path: repo
+          repository: mehtakaran9/${{ inputs.repository }}
       - name: Use Node.js 16.x
         uses: actions/setup-node@v3
         with:
@@ -61,16 +59,6 @@ jobs:
         with:
           repository: mehtakaran9/githobbit
           path: typer
-      - name: forker
-        uses: actions/checkout@v3
-        with:
-          repository: mehtakaran9/githobbit-repositories
-          path: repositories
-      - name: Forking the repo
-        run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --remote
-        env:
-          GITHUB_TOKEN: ${{ secrets.token }}
-
       - name: Checkout to the target branch
         run: |
           ls -a
@@ -87,24 +75,23 @@ jobs:
           node out/autoparser.js ../repo
       - name: setup git config
         run: |
-          cd repositories
+          cd repo
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
       - name: commit
         run: |
           # Stage the file, commit and push
-          cd repositories
-          git checkout -b ${{ inputs.owner }}_${{ inputs.repository }}_${{ inputs.target-branch }} main
-          cp -R ../repo .
+          cd repo
+          git checkout -b ${{ inputs.target-branch }}
           git add -A
           if ! git diff-index --quiet HEAD; then
             git commit -m "AUTO COMMITTED"
-            git push origin ${{ inputs.owner }}_${{ inputs.repository }}_${{ inputs.target-branch }}
+            git push origin ${{ inputs.target-branch }}
           fi
       - name: create a pull request
         uses: devops-infra/action-pull-request@v0.5.5
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.ACCESS_TOKEN_PAT_CLASSIC }}
           source_branch: ${{ inputs.target-branch }}
           target_branch: ${{ inputs.branch }}
           title: AUTOMATED PULL REQUEST
