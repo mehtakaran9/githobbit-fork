@@ -42,16 +42,23 @@ jobs:
       #   run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --remote
       - name: git fork
         run: |
+          # Fork the repo
           mkdir ${{ inputs.repository }}-fork
           gh repo clone ${{ inputs.owner}}/${{ inputs.repository }} original_repo
           cp -R original_repo/. ${{ inputs.repository }}-fork
           cd ${{ inputs.repository }}-fork
-          ls -a
           git remote remove origin
-          gh repo create --public --source .
+          gh repo create --source . --public --include-all-branches
+          # View Remote Info
           git remote -v
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
+          # Add a dummy file
+          git checkout ${{ inputs.branch }}
+          touch ${{ inputs.repository }}-fork.md
+          git commit -am "AUTO COMMIT"
+          git push -u origin ${{ inputs.branch }}
+          
       # - name: checkout to-type repository
       #   uses: actions/checkout@v3
       #   with:
