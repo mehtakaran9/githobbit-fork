@@ -44,7 +44,7 @@ jobs:
         run: |
           # Fork the repo
           mkdir ${{ inputs.repository }}-fork
-          git clone git@github.com:${{ inputs.owner }}/${{ inputs.repository }}.git original_repo
+          gh repo clone ${{ inputs.owner}}/${{ inputs.repository }} original_repo
           cp -R original_repo/. ${{ inputs.repository }}-fork
           cd ${{ inputs.repository }}-fork
           git checkout ${{ inputs.branch }}
@@ -59,6 +59,7 @@ jobs:
           touch ${{ inputs.repository }}-fork.md
           git add ${{ inputs.repository }}-fork.md
           git commit -am "AUTO COMMIT"
+          git remote set-url origin https://${{ inputs.owner }}:${{ secrets.token }}@github.com/${{ inputs.owner }}/${{ inputs.repository }}-fork.git
           git push -u origin ${{ inputs.branch }}
           
       # - name: checkout to-type repository
