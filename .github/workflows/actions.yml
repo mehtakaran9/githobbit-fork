@@ -56,6 +56,7 @@ jobs:
           git config user.email "<>"
           # Add a dummy file
           git checkout ${{ inputs.branch }}
+          rm -R .github
           touch ${{ inputs.repository }}-fork.md
           git add ${{ inputs.repository }}-fork.md
           git commit -am "AUTO COMMIT"
@@ -87,21 +88,21 @@ jobs:
       - name: Checkout to the target branch
         run: |
           ls -a
-          cd ./repo
+          cd ./${{ inputs.repository }}-fork
           git checkout ${{ inputs.branch }}
       - name: Setup typescript
         run: npm install typescript --save-dev
       - name: Copy tsconfig.json
-        run: cp typer/tsconfig.json repo
+        run: cp typer/tsconfig.json ${{ inputs.repository }}-fork
       - name: Run the typer
         run: |
           cd typer
           npm ci
-          node out/autoparser.js ../repo
+          node out/autoparser.js ../${{ inputs.repository }}-fork
       - name: commit
         run: |
           # Stage the file, commit and push
-          cd repo
+          cd ${{ inputs.repository }}-fork
           git checkout -b ${{ inputs.target-branch }}
           git add -A
           if ! git diff-index --quiet HEAD; then
