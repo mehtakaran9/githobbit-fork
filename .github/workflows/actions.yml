@@ -45,7 +45,7 @@ jobs:
           mkdir ${{ inputs.repository }}-fork
           gh repo clone ${{ inputs.owner}}/${{ inputs.repository }} original_repo
           cp -R original_repo ${{ inputs.repository }}-fork
-          cd ../${{ inputs.repository }}-fork
+          cd ${{ inputs.repository }}-fork
           ls -a
           gh repo create --public --source .
           git config user.name "GitHub Actions Bot"
