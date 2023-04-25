@@ -47,6 +47,7 @@ jobs:
           cd original_repo
           cp -R `ls -A | grep -v ".git"` ../${{ inputs.repository }}-fork
           cd ../${{ inputs.repository }}-fork
+          ls -a
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
           gh repo create --public --source .
