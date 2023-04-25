@@ -25,6 +25,9 @@ on:
         required: false
         type: string
         default: '.'
+    secrets:
+      token:
+        required: true
 
 env:
   GH_TOKEN: ${{ secrets.ACCESS_TOKEN_PAT_CLASSIC }}
@@ -35,13 +38,23 @@ jobs:
     if: ${{ inputs.working-directory }} != null && ${{ inputs.file-mode }} == false
     steps:
       # Add forking step
-      - name: Forking the repo
-        run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --remote
-      - name: checkout to-type repository
-        uses: actions/checkout@v3
-        with:
-          path: repo
-          repository: mehtakaran9/${{ inputs.repository }}
+      # - name: Forking the repo
+      #   run: gh repo fork ${{ inputs.owner }}/${{ inputs.repository }} --clone --remote
+      - name: git fork
+        run: |
+          git clone https://github.com/${{ inputs.owner}}/${{ inputs.repository }} repo
+          cd repo
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+          git remote set-url origin https://github.com/${{ inputs.username }}/${{ inputs.repository}}-fork
+          git remote add upstream https://github.com/${{ inputs.owner}}/${{ inputs.repository }}
+          git push origin master
+          git push --all
+      # - name: checkout to-type repository
+      #   uses: actions/checkout@v3
+      #   with:
+      #     path: repo
+      #     repository: mehtakaran9/${{ inputs.repository }}
       - name: Use Node.js 16.x
         uses: actions/setup-node@v3
         with:
@@ -73,11 +86,6 @@ jobs:
           cd typer
           npm ci
           node out/autoparser.js ../repo
-      - name: setup git config
-        run: |
-          cd repo
-          git config user.name "GitHub Actions Bot"
-          git config user.email "<>"
       - name: commit
         run: |
           # Stage the file, commit and push
@@ -91,7 +99,7 @@ jobs:
       - name: create a pull request
         uses: devops-infra/action-pull-request@v0.5.5
         with:
-          github_token: ${{ secrets.ACCESS_TOKEN_PAT_CLASSIC }}
+          github_token: ${{ secrets.token }}
           source_branch: ${{ inputs.target-branch }}
           target_branch: ${{ inputs.branch }}
           title: AUTOMATED PULL REQUEST
