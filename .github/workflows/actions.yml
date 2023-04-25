@@ -47,7 +47,9 @@ jobs:
           cp -R original_repo/. ${{ inputs.repository }}-fork
           cd ${{ inputs.repository }}-fork
           ls -a
+          git remote remove origin
           gh repo create --public --source .
+          git remote -v
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
       # - name: checkout to-type repository
