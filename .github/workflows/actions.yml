@@ -48,9 +48,9 @@ jobs:
           cp -R `ls -A | grep -v ".git"` ../${{ inputs.repository }}-fork
           cd ../${{ inputs.repository }}-fork
           ls -a
+          gh repo create --public --source .
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
-          gh repo create --public --source .
       # - name: checkout to-type repository
       #   uses: actions/checkout@v3
       #   with:
