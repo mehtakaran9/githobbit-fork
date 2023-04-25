@@ -110,17 +110,21 @@ jobs:
             git push origin ${{ inputs.target-branch }}
           fi
       - name: create a pull request
-        uses: devops-infra/action-pull-request@v0.5.5
-        with:
-          github_token: ${{ secrets.token }}
-          source_branch: ${{ inputs.target-branch }}
-          target_branch: ${{ inputs.branch }}
-          title: AUTOMATED PULL REQUEST
-          body: "**Automated pull request**"
-          label: enhancement
-          get_diff: true
-          ignore_users: dependabot
-          allow_no_diff: false
+        run: |
+          cd ./${{ inputs.repository }}-fork
+          git checkout ${{ inputs.target-branch }}
+          gh pr create --base ${{ inputs.branch }} --repo ${{ inputs.owner }}/${{ inputs.repository }}
+        # uses: devops-infra/action-pull-request@v0.5.5
+        # with:
+        #   github_token: ${{ secrets.token }}
+        #   source_branch: ${{ inputs.target-branch }}
+        #   target_branch: ${{ inputs.branch }}
+        #   title: AUTOMATED PULL REQUEST
+        #   body: "**Automated pull request**"
+        #   label: enhancement
+        #   get_diff: true
+        #   ignore_users: dependabot
+        #   allow_no_diff: false
 
   # file-typer:
   #   runs-on: ubuntu-latest
